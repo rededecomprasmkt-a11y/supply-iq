@@ -451,16 +451,18 @@ async function api(action, data){
 }
 
 async function driveInit(){
-  const rawToken = sessionStorage.getItem('gapi_token');
+  const rawToken = sessionStorage.getItem('siq_token') || sessionStorage.getItem('gapi_token');
   if(!rawToken){ window.location.href='index.html'; return; }
 
   // Mostra info do usuário
   try{
-    const u = JSON.parse(sessionStorage.getItem('gapi_user')||'{}');
-    document.getElementById('userName').textContent = u.name||u.email||'Usuário';
+    const _rawU = sessionStorage.getItem('siq_user') || sessionStorage.getItem('gapi_user') || '{}';
+    const u = JSON.parse(_rawU);
+    const _nome = u.nome||u.name||u.email||'Usuário';
+    document.getElementById('userName').textContent = _nome;
     const av = document.getElementById('userAvatar');
     if(u.picture){ av.innerHTML=`<img src="${u.picture}" alt="">`; }
-    else{ av.textContent=(u.name||'U')[0].toUpperCase(); }
+    else{ av.textContent=(_nome||'U')[0].toUpperCase(); }
     if(u.role==='admin'){
       document.getElementById('tab-usuarios').style.display='';
       document.getElementById('sb-usuarios').style.display='';

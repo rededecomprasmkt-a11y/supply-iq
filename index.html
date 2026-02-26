@@ -4,288 +4,192 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rede de Compras · Supply IQ</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden}
-body{background:#080d14;color:#e8f0fe;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;position:relative;overflow:hidden}
-.bg-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,160,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,0.03) 1px,transparent 1px);background-size:50px 50px;animation:gridMove 20s linear infinite}
-@keyframes gridMove{0%{transform:translate(0,0)}100%{transform:translate(50px,50px)}}
-.bg-glow{position:fixed;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,160,0.06) 0%,transparent 70%);top:-200px;left:-200px;animation:glowPulse 8s ease-in-out infinite}
-.bg-glow2{position:fixed;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(79,140,255,0.05) 0%,transparent 70%);bottom:-150px;right:-150px;animation:glowPulse 10s ease-in-out infinite reverse}
-@keyframes glowPulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.1)}}
-.card{position:relative;z-index:10;width:420px;background:rgba(15,21,32,0.9);border:1px solid rgba(0,229,160,0.15);border-radius:20px;padding:44px 40px;box-shadow:0 24px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(0,229,160,0.05);backdrop-filter:blur(20px);animation:cardIn .6s cubic-bezier(.16,1,.3,1)}
-@keyframes cardIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-.logo{display:flex;align-items:center;gap:14px;margin-bottom:32px}
-.logo-icon{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#00e5a0,#4f8cff);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 20px rgba(0,229,160,0.3)}
-.logo-text{display:flex;flex-direction:column;line-height:1.1}
-.logo-name{font-size:18px;font-weight:700;letter-spacing:-.3px}
-.logo-sub{font-size:11px;color:#4f6a90;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
-.tabs{display:flex;gap:0;margin-bottom:28px;background:rgba(255,255,255,0.04);border-radius:10px;padding:3px}
+body{background:#080d14;color:#e8f0fe;font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{width:100%;max-width:400px;background:#0f1520;border:1px solid rgba(0,229,160,0.15);border-radius:20px;padding:40px 36px;box-shadow:0 24px 80px rgba(0,0,0,0.6)}
+.logo{display:flex;align-items:center;gap:12px;margin-bottom:32px}
+.logo-icon{width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,#00e5a0,#4f8cff);display:flex;align-items:center;justify-content:center;font-size:20px}
+.logo-name{font-size:17px;font-weight:700}
+.logo-sub{font-size:10px;color:#4f6a90;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase}
+.tabs{display:flex;gap:0;margin-bottom:24px;background:rgba(255,255,255,0.04);border-radius:10px;padding:3px}
 .tab{flex:1;padding:9px;border:none;border-radius:8px;background:none;color:#6b82a6;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
 .tab.active{background:rgba(0,229,160,0.12);color:#00e5a0;border:1px solid rgba(0,229,160,0.2)}
-.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
-.form-label{font-size:11px;font-weight:600;color:#6b82a6;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase}
-.form-input{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#e8f0fe;font-family:'DM Sans',sans-serif;font-size:14px;padding:12px 14px;outline:none;transition:all .2s;width:100%}
-.form-input:focus{border-color:rgba(0,229,160,0.5);background:rgba(0,229,160,0.05)}
-.form-input::placeholder{color:#2a3a52}
-.btn-login{width:100%;background:linear-gradient(135deg,#00e5a0,#4f8cff);border:none;border-radius:12px;color:#000;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;padding:14px;cursor:pointer;transition:all .2s;margin-top:4px}
-.btn-login:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,229,160,0.3)}
-.divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:#2a3a52;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:1px}
-.divider::before,.divider::after{content:'';flex:1;height:1px;background:#1a2740}
-.btn-google{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;background:#fff;border:none;border-radius:12px;padding:13px 20px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#1a1a1a;cursor:pointer;transition:all .2s;box-shadow:0 2px 12px rgba(0,0,0,.3)}
-.btn-google:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
-.btn-google svg{width:20px;height:20px;flex-shrink:0}
-.error-msg{display:none;margin-top:14px;padding:10px 14px;background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.2);border-radius:8px;font-size:12px;color:#ff3b5c;font-family:'JetBrains Mono',monospace}
-.loading-area{display:none;flex-direction:column;align-items:center;gap:16px;padding:20px 0}
-.spinner{width:36px;height:36px;border:3px solid rgba(0,229,160,.2);border-top-color:#00e5a0;border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-text{font-size:13px;color:#6b82a6;font-family:'JetBrains Mono',monospace}
-.footer{margin-top:24px;text-align:center;font-size:11px;color:#2a3a52;font-family:'JetBrains Mono',monospace}
-.info-box{padding:11px 13px;background:rgba(79,140,255,0.07);border:1px solid rgba(79,140,255,0.15);border-radius:10px;font-size:11.5px;color:#6b82a6;line-height:1.6;margin-top:14px}
+label{display:block;font-size:11px;font-weight:600;color:#4f6a90;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#e8f0fe;font-family:'DM Sans',sans-serif;font-size:14px;padding:12px 14px;outline:none;transition:border-color .2s;margin-bottom:14px}
+input:focus{border-color:rgba(0,229,160,0.5)}
+input::placeholder{color:#2a3a52}
+.btn{width:100%;border:none;border-radius:11px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;padding:13px;cursor:pointer;transition:all .2s}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.btn-green{background:linear-gradient(135deg,#00e5a0,#4f8cff);color:#000}
+.btn-blue{background:linear-gradient(135deg,#4f8cff,#7c5cbf);color:#fff}
+.btn-green:not(:disabled):hover,.btn-blue:not(:disabled):hover{opacity:.9;transform:translateY(-1px)}
+.error{display:none;margin-top:12px;padding:10px 14px;background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.2);border-radius:8px;font-size:12px;color:#ff3b5c;font-family:'JetBrains Mono',monospace}
+.sep{margin-top:22px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.06)}
+.url-status{font-size:11px;margin-top:-8px;margin-bottom:14px;font-family:'JetBrains Mono',monospace;color:#4f6a90;min-height:16px}
+.spinner{display:none;flex-direction:column;align-items:center;gap:14px;padding:24px 0}
+.spin{width:32px;height:32px;border:3px solid rgba(0,229,160,.2);border-top-color:#00e5a0;border-radius:50%;animation:s .8s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+.spin-text{font-size:13px;color:#6b82a6;font-family:'JetBrains Mono',monospace}
 </style>
 </head>
 <body>
-<div class="bg-grid"></div>
-<div class="bg-glow"></div>
-<div class="bg-glow2"></div>
-
 <div class="card">
   <div class="logo">
     <div class="logo-icon">🔗</div>
-    <div class="logo-text">
+    <div>
       <div class="logo-name">Rede de Compras</div>
       <div class="logo-sub">Supply_IQ · v7</div>
     </div>
   </div>
 
-  <div id="mainArea">
-    <div class="tabs">
-      <button class="tab active" id="tab-senha" onclick="switchTab('senha')">🔑 Email e Senha</button>
-      <button class="tab" id="tab-google" onclick="switchTab('google')">🔵 Admin (Google)</button>
+  <div class="tabs">
+    <button class="tab active" id="tab-user"  onclick="showTab('user')">🔑 Usuário</button>
+    <button class="tab"        id="tab-admin" onclick="showTab('admin')">⚙️ Admin</button>
+  </div>
+
+  <div id="main">
+    <!-- USUÁRIO -->
+    <div id="panel-user">
+      <label>Email</label>
+      <input type="email" id="u-email" placeholder="seu@email.com" autocomplete="email">
+      <label>Senha</label>
+      <input type="password" id="u-senha" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')loginUsuario()">
+      <button class="btn btn-green" id="btn-user" onclick="loginUsuario()">Entrar</button>
     </div>
 
-    <!-- LOGIN POR SENHA -->
-    <div id="panel-senha">
-      <div class="form-group">
-        <div class="form-label">Email</div>
-        <input class="form-input" type="email" id="inputEmail" placeholder="seu@email.com" autocomplete="email">
-      </div>
-      <div class="form-group">
-        <div class="form-label">Senha</div>
-        <input class="form-input" type="password" id="inputSenha" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginSenha()">
-      </div>
-      <button class="btn-login" onclick="loginSenha()">Entrar</button>
-    </div>
+    <!-- ADMIN -->
+    <div id="panel-admin" style="display:none">
+      <label>Senha do Admin</label>
+      <input type="password" id="a-senha" placeholder="admin123"
+        onkeydown="if(event.key==='Enter')loginAdmin()">
+      <button class="btn btn-blue" id="btn-admin" onclick="loginAdmin()">Entrar como Admin</button>
 
-    <!-- PAINEL ADMIN -->
-    <div id="panel-google" style="display:none">
-
-      <!-- PASSO 1: URL do Apps Script -->
-      <div style="margin-bottom:18px">
-        <div class="form-label" style="margin-bottom:6px">🔗 PASSO 1 — URL do Apps Script</div>
-        <input class="form-input" type="url" id="inputApiUrl"
+      <div class="sep">
+        <label>URL do Apps Script</label>
+        <input type="url" id="a-url"
           placeholder="https://script.google.com/macros/s/…/exec"
-          style="font-family:'JetBrains Mono',monospace;font-size:11px"
-          onblur="salvarApiUrl(this.value)">
-        <div id="apiStatus" style="font-size:11px;margin-top:5px;font-family:'JetBrains Mono',monospace;color:#4f6a90">
-          Cole a URL gerada no Google Apps Script.
-        </div>
-      </div>
-
-      <!-- PASSO 2: Senha admin -->
-      <div class="form-label" style="margin-bottom:6px">🔑 PASSO 2 — Senha do Admin</div>
-      <div class="form-group" style="margin-bottom:10px">
-        <input class="form-input" type="password" id="inputAdminSenha"
-          placeholder="Senha do admin (padrão: admin123)"
-          onkeydown="if(event.key==='Enter')loginAdmin()">
-      </div>
-      <button class="btn-login" style="background:linear-gradient(135deg,#4f8cff,#7c5cbf)" onclick="loginAdmin()">
-        Entrar como Admin
-      </button>
-
-      <div class="info-box" style="margin-top:14px;font-size:11px">
-        💡 A senha padrão do admin é <strong style="color:#ffd34e;font-family:'JetBrains Mono',monospace">admin123</strong>. Você pode criar um usuário admin na planilha do Apps Script para trocar.
+          style="font-size:11px;font-family:'JetBrains Mono',monospace"
+          onblur="salvarUrl(this.value)">
+        <div class="url-status" id="url-status"></div>
       </div>
     </div>
 
-    <div class="error-msg" id="errorMsg"></div>
+    <div class="error" id="err"></div>
   </div>
 
-  <div class="loading-area" id="loadingArea">
-    <div class="spinner"></div>
-    <div class="loading-text" id="loadingText">Verificando…</div>
+  <div class="spinner" id="spin">
+    <div class="spin"></div>
+    <div class="spin-text" id="spin-msg">Verificando…</div>
   </div>
-
-  <div class="footer">© 2026 Rede de Compras · Supply IQ</div>
 </div>
 
 <script>
-const API_KEY = 'supplyiq2026';
+const API_KEY    = 'supplyiq2026';
+const ADMIN_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a'; // admin123
 
-async function sha256(str){
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+async function sha256(s){
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
-function switchTab(t){
-  document.getElementById('tab-senha').className  = 'tab'+(t==='senha'?' active':'');
-  document.getElementById('tab-google').className = 'tab'+(t==='google'?' active':'');
-  document.getElementById('panel-senha').style.display  = t==='senha'?'':'none';
-  document.getElementById('panel-google').style.display = t==='google'?'':'none';
-  hideError();
+function showTab(t){
+  document.getElementById('tab-user').className  = 'tab'+(t==='user' ?' active':'');
+  document.getElementById('tab-admin').className = 'tab'+(t==='admin'?' active':'');
+  document.getElementById('panel-user').style.display  = t==='user' ?'':'none';
+  document.getElementById('panel-admin').style.display = t==='admin'?'':'none';
+  document.getElementById('err').style.display='none';
 }
-function showLoading(msg){
-  document.getElementById('mainArea').style.display='none';
-  document.getElementById('loadingArea').style.display='flex';
-  document.getElementById('loadingText').textContent=msg||'Carregando…';
+function err(msg){ const e=document.getElementById('err'); e.textContent=msg; e.style.display=''; }
+function loading(on,msg){
+  document.getElementById('main').style.display = on?'none':'';
+  document.getElementById('spin').style.display = on?'flex':'none';
+  if(msg) document.getElementById('spin-msg').textContent=msg;
 }
-function hideLoading(){ document.getElementById('mainArea').style.display=''; document.getElementById('loadingArea').style.display='none'; }
-function showError(msg){ const el=document.getElementById('errorMsg'); el.style.display=''; el.textContent=msg; }
-function hideError(){ document.getElementById('errorMsg').style.display='none'; }
+function go(role,nome,email){
+  sessionStorage.setItem('siq_token','ok');
+  sessionStorage.setItem('siq_user', JSON.stringify({role,nome,email}));
+  window.location.href='app.html';
+}
 
-// ── Login usuário normal (via Apps Script) ───────────────────
-async function loginSenha(){
-  const email = document.getElementById('inputEmail').value.trim().toLowerCase();
-  const senha = document.getElementById('inputSenha').value;
-  if(!email||!senha){ showError('Preencha email e senha.'); return; }
+// ── Admin ────────────────────────────────────────────────────
+async function loginAdmin(){
+  const senha = document.getElementById('a-senha').value;
+  if(!senha){ err('Digite a senha.'); return; }
+  const btn = document.getElementById('btn-admin');
+  btn.disabled=true; btn.textContent='⏳ Verificando…';
+  document.getElementById('err').style.display='none';
+  try{
+    const h = await sha256(senha);
+    const valid = localStorage.getItem('siq_admin_hash') || ADMIN_HASH;
+    if(h!==valid){ err('Senha incorreta. Padrão: admin123'); return; }
+    go('admin','Admin','admin');
+  }catch(e){ err('Erro: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='Entrar como Admin'; }
+}
+
+// ── Usuário ──────────────────────────────────────────────────
+async function loginUsuario(){
+  const email = document.getElementById('u-email').value.trim().toLowerCase();
+  const senha = document.getElementById('u-senha').value;
+  if(!email||!senha){ err('Preencha email e senha.'); return; }
 
   const apiUrl = localStorage.getItem('siq_api_url');
-  if(!apiUrl){
-    showError('⚠ URL do sistema não configurada. Vá na aba Admin e configure.');
-    return;
-  }
+  if(!apiUrl){ err('Sistema não configurado. Fale com o admin.'); return; }
 
-  const btn = document.getElementById('btnLoginSenha');
-  btn.disabled = true; btn.textContent = '⏳ Verificando…';
-  hideError();
+  const btn = document.getElementById('btn-user');
+  btn.disabled=true; btn.textContent='⏳ Verificando…';
+  document.getElementById('err').style.display='none';
+  loading(true,'Verificando credenciais…');
 
   try{
     const senhaHash = await sha256(senha);
-    const r = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {'Content-Type':'text/plain'},
-      body: JSON.stringify({ action:'login', key: API_KEY, email, senhaHash })
+    const r = await fetch(apiUrl,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({action:'login',key:API_KEY,email,senhaHash})
     });
+    if(!r.ok) throw new Error('HTTP '+r.status);
     const d = await r.json();
-    if(!d.ok){ showError(d.error||'Email ou senha incorretos.'); return; }
-    sessionStorage.setItem('gapi_token', 'gas_user');
-    sessionStorage.setItem('gapi_user', JSON.stringify({
-      name: d.user.nome||d.user.email,
-      email: d.user.email,
-      picture: '',
-      role: d.user.role||'user'
-    }));
-    showLoading('Entrando…');
-    setTimeout(()=>{ window.location.href='app.html'; }, 400);
+    if(!d.ok){ loading(false); err(d.error||'Email ou senha incorretos.'); return; }
+    go(d.user.role||'user', d.user.nome||email, d.user.email);
   }catch(e){
-    showError('Erro de conexão: '+e.message);
-  } finally {
+    loading(false);
+    // Fallback: cache local
+    try{
+      const cache = localStorage.getItem('siq_usuarios_cache');
+      if(cache){
+        const lista = JSON.parse(cache);
+        const h = await sha256(senha);
+        const u = lista.find(x=>x.email===email&&x.senha===h&&x.ativo!==false);
+        if(u){ go(u.role||'user',u.nome||email,u.email); return; }
+      }
+    }catch(e2){}
+    err('Não foi possível conectar. Verifique a URL do Apps Script na aba Admin.');
+  }finally{
     btn.disabled=false; btn.textContent='Entrar';
   }
 }
 
-// ── Login admin ──────────────────────────────────────────────
-// Senha padrão: admin123 (hash SHA-256 guardado no localStorage)
-const ADMIN_HASH_KEY = 'siq_admin_hash';
-const DEFAULT_ADMIN_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a'; // sha256('admin123')
-
-async function loginAdmin(){
-  const senha  = document.getElementById('inputAdminSenha').value;
-  const btn    = document.querySelector('#panel-google .btn-login');
-
-  // Feedback imediato
-  btn.disabled = true;
-  btn.textContent = '⏳ Verificando senha…';
-  hideError();
-
-  if(!senha){
-    showError('Digite a senha do admin.');
-    btn.disabled=false; btn.textContent='Entrar como Admin';
-    return;
-  }
-
-  const apiUrl = localStorage.getItem('siq_api_url');
-  if(!apiUrl){
-    showError('Cole a URL do Apps Script no campo acima primeiro.');
-    btn.disabled=false; btn.textContent='Entrar como Admin';
-    return;
-  }
-
-  try{
-    // 1. Verifica senha
-    const senhaHash = await sha256(senha);
-    const adminHash = localStorage.getItem(ADMIN_HASH_KEY) || DEFAULT_ADMIN_HASH;
-
-    if(senhaHash !== adminHash){
-      showError('Senha incorreta. Senha padrão: admin123');
-      btn.disabled=false; btn.textContent='Entrar como Admin';
-      return;
-    }
-
-    // 2. Testa conexão com API (com timeout de 10s)
-    btn.textContent = '⏳ Conectando à API…';
-    const controller = new AbortController();
-    const timeout = setTimeout(()=>controller.abort(), 10000);
-
-    let r;
-    try{
-      r = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {'Content-Type':'text/plain'},
-        body: JSON.stringify({ action:'getAllData', key: API_KEY }),
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-    }catch(fetchErr){
-      clearTimeout(timeout);
-      if(fetchErr.name==='AbortError'){
-        showError('Timeout: API demorou mais de 10s. Verifique a URL.');
-      } else {
-        // CORS ou rede — tenta entrar mesmo assim (API pode estar OK)
-        console.warn('Fetch error (may be CORS):', fetchErr.message);
-        r = null;
-      }
-    }
-
-    // 3. Entra no app (mesmo se API não respondeu — dados locais funcionam)
-    sessionStorage.setItem('gapi_token', 'gas_admin');
-    sessionStorage.setItem('gapi_user', JSON.stringify({
-      name: 'Admin',
-      email: 'admin',
-      picture: '',
-      role: 'admin'
-    }));
-    btn.textContent = '✅ Entrando…';
-    window.location.href = 'app.html';
-
-  }catch(e){
-    showError('Erro inesperado: '+e.message);
-    btn.disabled=false; btn.textContent='Entrar como Admin';
-  }
+// ── URL ──────────────────────────────────────────────────────
+function salvarUrl(url){
+  url=url.trim();
+  const st=document.getElementById('url-status');
+  if(!url){ localStorage.removeItem('siq_api_url'); st.textContent=''; return; }
+  localStorage.setItem('siq_api_url',url);
+  st.style.color='#00e5a0'; st.textContent='✅ URL salva!';
 }
 
-// ── Salvar URL do Apps Script ────────────────────────────────
-function salvarApiUrl(url){
-  url = url.trim();
-  const st = document.getElementById('apiStatus');
-  if(!url){ localStorage.removeItem('siq_api_url'); st.textContent='URL removida.'; st.style.color='#ff3b5c'; return; }
-  localStorage.setItem('siq_api_url', url);
-  st.textContent = '✅ URL salva!';
-  st.style.color = '#00e5a0';
-}
-
-window.onload = function(){
-  if(sessionStorage.getItem('gapi_token') && sessionStorage.getItem('gapi_user')){
-    showLoading('Retomando sessão…'); window.location.href='app.html'; return;
-  }
-  // Preenche URL salva
-  const savedUrl = localStorage.getItem('siq_api_url');
-  const inp = document.getElementById('inputApiUrl');
-  if(inp && savedUrl){
-    inp.value = savedUrl;
-    const st = document.getElementById('apiStatus');
-    if(st){ st.textContent='✅ URL configurada e salva.'; st.style.color='#00e5a0'; }
+// ── Init ─────────────────────────────────────────────────────
+window.onload=function(){
+  if(sessionStorage.getItem('siq_token')){ window.location.href='app.html'; return; }
+  const url=localStorage.getItem('siq_api_url');
+  if(url){
+    document.getElementById('a-url').value=url;
+    document.getElementById('url-status').textContent='✅ URL configurada';
+    document.getElementById('url-status').style.color='#00e5a0';
   }
 };
 </script>
