@@ -374,8 +374,11 @@ td{padding:7px 11px;border-right:1px solid var(--border);vertical-align:middle}t
       </div>
       <button class="btn btn-primary" onclick="abrirModalNovoUsuario()">＋ Novo Usuário</button>
     </div>
-    <div id="driveStatusBar" style="margin-bottom:16px;padding:10px 14px;border-radius:8px;font-family:var(--mono);font-size:11px;background:var(--panel);border:1px solid var(--border);color:var(--text3)">
+    <div id="driveStatusBar" style="margin-bottom:10px;padding:10px 14px;border-radius:8px;font-family:var(--mono);font-size:11px;background:var(--panel);border:1px solid var(--border);color:var(--text3)">
       🔄 Verificando conexão com Drive…
+    </div>
+    <div id="driveDebugBar" style="margin-bottom:16px;padding:10px 14px;border-radius:8px;font-family:var(--mono);font-size:10px;background:rgba(79,140,255,0.05);border:1px solid rgba(79,140,255,0.15);color:var(--text3);line-height:1.8">
+      🔍 Diagnóstico: carregando…
     </div>
     <div id="usuariosList" style="display:flex;flex-direction:column;gap:10px">
       <div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum usuário</div><div class="empty-sub">Crie o primeiro usuário para liberar o acesso por email e senha.</div></div>
@@ -433,6 +436,10 @@ const S={
 // ═══ GOOGLE DRIVE API ═══
 function driveHeaders(){
   return {'Authorization':'Bearer '+S.driveToken,'Content-Type':'application/json'};
+}
+// Headers sem Content-Type — deixa o browser definir o boundary correto no multipart
+function driveAuthHeader(){
+  return {'Authorization':'Bearer '+S.driveToken};
 }
 
 async function driveInit(){
@@ -586,32 +593,50 @@ async function driveReadFile(fileId){
 
 async function driveWriteFile(key, data){
   const filename = FILES[key];
-  const content = JSON.stringify(data);
-  const blob = new Blob([content],{type:'application/json'});
+  const jsonContent = JSON.stringify(data);
 
-  if(S.fileIds[key]){
-    // Update existing
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify({name:filename})],{type:'application/json'}));
-    form.append('file', blob);
-    const r = await fetch(
-      `https://www.googleapis.com/upload/drive/v3/files/${S.fileIds[key]}?uploadType=multipart`,
-      { method:'PATCH', headers:{'Authorization':'Bearer '+S.driveToken}, body:form }
+  // Usa upload direto (não multipart) para evitar problemas de Content-Type boundary
+  // Primeiro garante que o fileId existe
+  if(!S.fileIds[key]){
+    // Cria o arquivo vazio primeiro via metadata-only
+    const createR = await fetch(
+      'https://www.googleapis.com/drive/v3/files?fields=id',
+      {
+        method:'POST',
+        headers:{...driveHeaders()},
+        body: JSON.stringify({name: filename, parents:['appDataFolder'], mimeType:'application/json'})
+      }
     );
-    if(!r.ok) throw {status:r.status};
-  } else {
-    // Create new in appDataFolder
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify({name:filename, parents:['appDataFolder']})],{type:'application/json'}));
-    form.append('file', blob);
-    const r = await fetch(
-      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
-      { method:'POST', headers:{'Authorization':'Bearer '+S.driveToken}, body:form }
-    );
-    if(!r.ok) throw {status:r.status};
-    const d = await r.json();
+    if(!createR.ok){
+      const err = await createR.text();
+      console.error('Drive create error:', createR.status, err);
+      throw {status: createR.status, message: err};
+    }
+    const d = await createR.json();
     S.fileIds[key] = d.id;
+    console.log('Drive: created', filename, 'id=', d.id);
   }
+
+  // Agora faz upload do conteúdo (media-only update)
+  const uploadR = await fetch(
+    `https://www.googleapis.com/upload/drive/v3/files/${S.fileIds[key]}?uploadType=media`,
+    {
+      method:'PATCH',
+      headers:{
+        'Authorization':'Bearer '+S.driveToken,
+        'Content-Type':'application/json'
+      },
+      body: jsonContent
+    }
+  );
+  if(!uploadR.ok){
+    const err = await uploadR.text();
+    console.error('Drive upload error:', uploadR.status, err);
+    // Se o arquivo foi deletado externamente, limpa o ID para recriar
+    if(uploadR.status===404){ S.fileIds[key]=null; }
+    throw {status: uploadR.status, message: err};
+  }
+  console.log('Drive: saved', filename, '—', jsonContent.length, 'bytes');
 }
 
 async function loadFromDrive(){
@@ -1136,23 +1161,26 @@ async function saveUsuarios(lista){
   localStorage.setItem('siq_usuarios_updated', new Date().toISOString());
   localStorage.setItem('siq_admin_token', S.driveToken);
 
-  // Tenta salvar no Drive (best-effort)
+  // Tenta salvar no Drive (best-effort) — usa media-only upload para evitar problemas de multipart
   try{
-    const content = JSON.stringify(lista);
-    const blob = new Blob([content],{type:'application/json'});
-    const form = new FormData();
+    const jsonContent = JSON.stringify(lista);
+    if(!usuariosFileId){
+      // Cria arquivo via metadata
+      const cr = await fetch('https://www.googleapis.com/drive/v3/files?fields=id',{
+        method:'POST',
+        headers:{...driveHeaders()},
+        body: JSON.stringify({name:USERS_FILE, parents:['appDataFolder'], mimeType:'application/json'})
+      });
+      if(cr.ok){ const d=await cr.json(); usuariosFileId=d.id; console.log('Drive: created usuarios.json id=',d.id); }
+    }
     if(usuariosFileId){
-      form.append('metadata',new Blob([JSON.stringify({name:USERS_FILE})],{type:'application/json'}));
-      form.append('file',blob);
-      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${usuariosFileId}?uploadType=multipart`,
-        {method:'PATCH',headers:{'Authorization':'Bearer '+S.driveToken},body:form});
-    }else{
-      form.append('metadata',new Blob([JSON.stringify({name:USERS_FILE,parents:['appDataFolder']})],{type:'application/json'}));
-      form.append('file',blob);
-      const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
-        {method:'POST',headers:{'Authorization':'Bearer '+S.driveToken},body:form});
-      const d = await r.json();
-      usuariosFileId = d.id;
+      const ur = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${usuariosFileId}?uploadType=media`,{
+        method:'PATCH',
+        headers:{'Authorization':'Bearer '+S.driveToken,'Content-Type':'application/json'},
+        body: jsonContent
+      });
+      if(!ur.ok){ const e=await ur.text(); console.error('Drive usuarios upload error:',ur.status,e); if(ur.status===404)usuariosFileId=null; }
+      else{ console.log('Drive: saved usuarios.json —', jsonContent.length, 'bytes'); }
     }
   }catch(e){
     console.warn('Drive save failed for usuarios, but localStorage cache is updated:', e);
@@ -1162,19 +1190,32 @@ async function saveUsuarios(lista){
 async function renderUsuarios(){
   // Atualiza status do Drive
   const statusBar = document.getElementById('driveStatusBar');
+  const debugBar = document.getElementById('driveDebugBar');
   if(statusBar){
     try{
       const testR = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token='+S.driveToken);
       const testData = await testR.json();
+      // Mostra diagnóstico
+      if(debugBar){
+        const cache = localStorage.getItem('siq_usuarios_cache');
+        const cacheUsers = cache ? (() => { try{return JSON.parse(cache);}catch(e){return [];} })() : [];
+        const adminToken = localStorage.getItem('siq_admin_token');
+        debugBar.innerHTML = [
+          '📦 Pasta: <strong>appDataFolder</strong> (oculta — não aparece no Drive normal do usuário)',
+          '💾 Cache local: <strong style="color:var(--accent)">'+cacheUsers.length+' usuário(s)</strong>'+(cache?' · '+cache.length+' bytes':''),
+          '🆔 ID arquivo usuários no Drive: <strong>'+(usuariosFileId||'ainda não criado')+'</strong>',
+          '🔑 Token ativo: <strong>'+(S.driveToken?S.driveToken.slice(0,16)+'…':'ausente')+'</strong>',
+        ].join('<br>');
+      }
       if(testData.error){
         statusBar.innerHTML = '❌ <strong style="color:var(--red)">Token expirado.</strong> Drive desconectado. <button onclick="reautenticar()" style="background:var(--yellow);color:#000;border:none;border-radius:5px;padding:2px 9px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--mono);margin-left:8px">🔄 Renovar Sessão</button>';
-        statusBar.style.cssText += ';border-color:rgba(255,59,92,0.3);background:rgba(255,59,92,0.07);color:var(--red)';
+        statusBar.style.borderColor='rgba(255,59,92,0.3)';statusBar.style.background='rgba(255,59,92,0.07)';statusBar.style.color='var(--red)';
       } else {
         const mins = Math.round(parseInt(testData.expires_in)/60);
         const updated = localStorage.getItem('siq_usuarios_updated');
-        const updStr = updated ? ' · Cache: '+new Date(updated).toLocaleString('pt-BR') : '';
-        statusBar.innerHTML = `✅ <strong style="color:var(--accent)">Drive conectado.</strong> Token expira em <strong style="color:var(--yellow)">${mins} min</strong>. Usuários criados aqui podem logar imediatamente (cache local permanente)${updStr}.`;
-        statusBar.style.cssText += ';border-color:rgba(0,229,160,0.2);background:rgba(0,229,160,0.05)';
+        const updStr = updated ? ' · Cache: '+new Date(updated).toLocaleString('pt-BR') : ' · Cache: ainda não sincronizado';
+        statusBar.innerHTML = '✅ <strong style="color:var(--accent)">Drive conectado.</strong> Token expira em <strong style="color:var(--yellow)">'+mins+' min</strong>'+updStr+'.';
+        statusBar.style.borderColor='rgba(0,229,160,0.2)';statusBar.style.background='rgba(0,229,160,0.05)';statusBar.style.color='var(--text2)';
       }
     }catch(e){
       statusBar.innerHTML = '⚠ Não foi possível verificar o Drive.';
@@ -1235,17 +1276,21 @@ async function criarUsuario(){
   btnCriar.disabled = true;
 
   try{
+    console.log('criarUsuario: carregando lista...');
     const lista = await loadUsuarios();
+    console.log('criarUsuario: lista atual:', lista.length, 'usuários');
     if(lista.find(u=>u.email===email)){toast('⚠ Email já cadastrado','error');btnCriar.textContent='✔ Criar';btnCriar.disabled=false;return;}
     const hash = await sha256(senha);
     lista.push({nome,email,senha:hash,role:'user',ativo:true,criadoEm:new Date().toISOString()});
+    console.log('criarUsuario: salvando lista com', lista.length, 'usuários...');
     await saveUsuarios(lista);
+    console.log('criarUsuario: salvo! Cache local:', localStorage.getItem('siq_usuarios_cache')?.length, 'bytes');
     fecharModalNovoUsuario();
     renderUsuarios();
     toast(`✅ Usuário "${nome}" criado! Pode fazer login com email/senha.`,'success');
   } catch(e){
     toast('❌ Erro ao salvar usuário: '+e.message,'error');
-    console.error(e);
+    console.error('criarUsuario error:', e);
   } finally {
     btnCriar.textContent='✔ Criar';
     btnCriar.disabled=false;
