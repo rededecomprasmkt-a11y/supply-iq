@@ -245,6 +245,7 @@ td{padding:7px 11px;border-right:1px solid var(--border);vertical-align:middle}t
     <button class="nav-tab t-orange" onclick="switchView('requisicoes')" id="tab-requisicoes">🛒 Requisições</button>
     <button class="nav-tab" onclick="switchView('fornecedores')" id="tab-fornecedores">🏢 Fornecedores</button>
     <button class="nav-tab t-purple" onclick="switchView('nfe')" id="tab-nfe">📄 NF-e XML</button>
+    <button class="nav-tab" onclick="switchView('usuarios')" id="tab-usuarios" style="display:none">👥 Usuários</button>
   </div>
   <div class="header-right">
     <div class="sync-dot" id="syncDot" title="Sincronizado com Google Drive"></div>
@@ -266,6 +267,7 @@ td{padding:7px 11px;border-right:1px solid var(--border);vertical-align:middle}t
   <div class="sb-item" onclick="switchView('requisicoes')"><span class="sbi">🛒</span> Requisições <span class="sb-badge" id="sb-req-badge" style="display:none">0</span></div>
   <div class="sb-item" onclick="switchView('fornecedores')"><span class="sbi">🏢</span> Fornecedores <span class="sb-badge g" id="sb-forn-badge">0</span></div>
   <div class="sb-item" onclick="switchView('nfe')"><span class="sbi">📄</span> NF-e XML</div>
+  <div class="sb-item" id="sb-usuarios" onclick="switchView('usuarios')" style="display:none"><span class="sbi">👥</span> Usuários</div>
   <div class="sb-section">Filtros</div>
   <div class="sb-item" onclick="setStatus('crit')"><span class="sbi">🔴</span> Urgente <span class="sb-badge" id="sb-crit-n">0</span></div>
   <div class="sb-item" onclick="setStatus('warn')"><span class="sbi">🟠</span> Repor <span class="sb-badge o" id="sb-warn-n">0</span></div>
@@ -363,8 +365,36 @@ td{padding:7px 11px;border-right:1px solid var(--border);vertical-align:middle}t
     <div class="nfe-right" id="nfeRight"><div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">Selecione uma NF-e</div><div class="empty-sub">Importe XMLs para ver dados e custos.</div></div></div>
   </div>
 </div>
+<div class="view" id="view-usuarios">
+  <div style="flex:1;overflow-y:auto;padding:28px 32px;max-width:700px;margin:0 auto;width:100%">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div style="font-size:20px;font-weight:800;letter-spacing:-.3px">👥 Gerenciar Usuários</div>
+        <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-top:3px">Usuários com acesso ao sistema via email/senha</div>
+      </div>
+      <button class="btn btn-primary" onclick="abrirModalNovoUsuario()">＋ Novo Usuário</button>
+    </div>
+    <div id="usuariosList" style="display:flex;flex-direction:column;gap:10px">
+      <div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum usuário</div><div class="empty-sub">Crie o primeiro usuário para liberar o acesso por email e senha.</div></div>
+    </div>
+  </div>
+</div>
 </div></div>
 <div class="toast" id="toast"></div>
+<div class="modal-overlay" id="modalNovoUsuario">
+  <div class="modal-box" style="max-width:460px">
+    <div class="modal-title">👤 Novo Usuário</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px">
+      <div><div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Nome</div><input class="fi" id="nu-nome" placeholder="Nome completo" style="width:100%"></div>
+      <div><div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Email</div><input class="fi" id="nu-email" type="email" placeholder="usuario@email.com" style="width:100%"></div>
+      <div><div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Senha</div><input class="fi" id="nu-senha" type="password" placeholder="Mínimo 6 caracteres" style="width:100%"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModalNovoUsuario()">Cancelar</button>
+      <button class="btn btn-primary" onclick="criarUsuario()">✔ Criar</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal-box">
     <div class="modal-title">⚠️ Itens sem preço</div>
@@ -413,6 +443,12 @@ async function driveInit(){
     const av = document.getElementById('userAvatar');
     if(u.picture){ av.innerHTML=`<img src="${u.picture}" alt="">`; }
     else{ av.textContent=(u.name||'U')[0].toUpperCase(); }
+    // Mostra aba de usuários só para admin (logado via Google)
+    if(u.role==='admin'){
+      document.getElementById('tab-usuarios').style.display='';
+      document.getElementById('sb-usuarios').style.display='';
+      localStorage.setItem('siq_admin_token', S.driveToken);
+    }
   }catch(e){}
 
   // Find or create appDataFolder file structure
@@ -598,6 +634,7 @@ function switchView(v){
   if(v==='requisicoes')renderReqList();
   if(v==='fornecedores')renderFornecList();
   if(v==='nfe')renderNfeHist();
+  if(v==='usuarios')renderUsuarios();
 }
 
 // ═══ UPLOAD XLSX ═══
@@ -961,6 +998,116 @@ function nfeAtualizarCustos(chave){
   openNfe(chave);if(S.activeReq)openReq(S.activeReq);
 }
 function nfeDelete(chave){if(!confirm('Remover?'))return;S.nfeHistory=S.nfeHistory.filter(n=>n.chave!==chave);S.activeNfe=null;save('nfe');renderNfeHist();document.getElementById('nfeRight').innerHTML='<div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">NF removida</div></div>'}
+
+// ═══ USUÁRIOS (admin only) ═══
+const USERS_FILE = 'usuarios.json';
+let usuariosFileId = null;
+
+async function sha256(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function loadUsuarios(){
+  try{
+    const r = await fetch(
+      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${USERS_FILE}'&fields=files(id)`,
+      {headers:{'Authorization':'Bearer '+S.driveToken}}
+    );
+    if(!r.ok) return [];
+    const d = await r.json();
+    if(!d.files||!d.files[0]) return [];
+    usuariosFileId = d.files[0].id;
+    const r2 = await fetch(`https://www.googleapis.com/drive/v3/files/${usuariosFileId}?alt=media`,{headers:{'Authorization':'Bearer '+S.driveToken}});
+    if(!r2.ok) return [];
+    return await r2.json();
+  }catch(e){return [];}
+}
+
+async function saveUsuarios(lista){
+  const content = JSON.stringify(lista);
+  const blob = new Blob([content],{type:'application/json'});
+  const form = new FormData();
+  if(usuariosFileId){
+    form.append('metadata',new Blob([JSON.stringify({name:USERS_FILE})],{type:'application/json'}));
+    form.append('file',blob);
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${usuariosFileId}?uploadType=multipart`,
+      {method:'PATCH',headers:{'Authorization':'Bearer '+S.driveToken},body:form});
+  }else{
+    form.append('metadata',new Blob([JSON.stringify({name:USERS_FILE,parents:['appDataFolder']})],{type:'application/json'}));
+    form.append('file',blob);
+    const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+      {method:'POST',headers:{'Authorization':'Bearer '+S.driveToken},body:form});
+    const d = await r.json();
+    usuariosFileId = d.id;
+  }
+  // Atualiza token admin no localStorage para login por senha funcionar
+  localStorage.setItem('siq_admin_token', S.driveToken);
+}
+
+async function renderUsuarios(){
+  const lista = await loadUsuarios();
+  const el = document.getElementById('usuariosList');
+  if(!lista||!lista.length){
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum usuário</div><div class="empty-sub">Crie o primeiro usuário para liberar o acesso por email e senha.</div></div>';
+    return;
+  }
+  el.innerHTML = lista.map(u=>`
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px">
+      <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--purple));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0">${(u.nome||u.email)[0].toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700">${u.nome||'—'}</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text2)">${u.email}</div>
+      </div>
+      <span style="font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:5px;${u.ativo===false?'background:var(--red-dim);color:var(--red);border:1px solid rgba(255,59,92,.3)':'background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,229,160,.3)'}">${u.ativo===false?'INATIVO':'ATIVO'}</span>
+      <button class="btn btn-ghost" style="font-size:11px" onclick="toggleUsuario('${u.email}')">${u.ativo===false?'Ativar':'Desativar'}</button>
+      <button class="btn btn-red" style="font-size:11px" onclick="deletarUsuario('${u.email}')">🗑</button>
+    </div>
+  `).join('');
+}
+
+function abrirModalNovoUsuario(){
+  document.getElementById('nu-nome').value='';
+  document.getElementById('nu-email').value='';
+  document.getElementById('nu-senha').value='';
+  document.getElementById('modalNovoUsuario').classList.add('show');
+  setTimeout(()=>document.getElementById('nu-nome').focus(),100);
+}
+function fecharModalNovoUsuario(){document.getElementById('modalNovoUsuario').classList.remove('show');}
+
+async function criarUsuario(){
+  const nome = document.getElementById('nu-nome').value.trim();
+  const email = document.getElementById('nu-email').value.trim().toLowerCase();
+  const senha = document.getElementById('nu-senha').value;
+  if(!nome||!email||!senha){toast('⚠ Preencha todos os campos','error');return;}
+  if(senha.length<6){toast('⚠ Senha deve ter pelo menos 6 caracteres','error');return;}
+  const lista = await loadUsuarios();
+  if(lista.find(u=>u.email===email)){toast('⚠ Email já cadastrado','error');return;}
+  const hash = await sha256(senha);
+  lista.push({nome,email,senha:hash,role:'user',ativo:true,criadoEm:new Date().toISOString()});
+  await saveUsuarios(lista);
+  fecharModalNovoUsuario();
+  renderUsuarios();
+  toast(`✅ Usuário "${nome}" criado com sucesso!`,'success');
+}
+
+async function deletarUsuario(email){
+  if(!confirm(`Excluir usuário ${email}?`))return;
+  let lista = await loadUsuarios();
+  lista = lista.filter(u=>u.email!==email);
+  await saveUsuarios(lista);
+  renderUsuarios();
+  toast('Usuário removido','');
+}
+
+async function toggleUsuario(email){
+  const lista = await loadUsuarios();
+  const u = lista.find(x=>x.email===email);
+  if(u) u.ativo = u.ativo===false?true:false;
+  await saveUsuarios(lista);
+  renderUsuarios();
+  toast(u?.ativo?'Usuário ativado':'Usuário desativado','');
+}
 
 // ═══ TOAST ═══
 let toastTimer;

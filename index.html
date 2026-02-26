@@ -8,138 +8,51 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
-body{
-  background:#080d14;
-  color:#e8f0fe;
-  font-family:'DM Sans',sans-serif;
-  display:flex;align-items:center;justify-content:center;
-  min-height:100vh;
-  position:relative;
-  overflow:hidden;
-}
-
-/* Animated background */
-.bg-grid{
-  position:fixed;inset:0;
-  background-image:
-    linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
-  background-size:50px 50px;
-  animation:gridMove 20s linear infinite;
-}
+body{background:#080d14;color:#e8f0fe;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;position:relative;overflow:hidden}
+.bg-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,160,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,0.03) 1px,transparent 1px);background-size:50px 50px;animation:gridMove 20s linear infinite}
 @keyframes gridMove{0%{transform:translate(0,0)}100%{transform:translate(50px,50px)}}
-
-.bg-glow{
-  position:fixed;
-  width:600px;height:600px;
-  border-radius:50%;
-  background:radial-gradient(circle, rgba(0,229,160,0.06) 0%, transparent 70%);
-  top:-200px;left:-200px;
-  animation:glowPulse 8s ease-in-out infinite;
-}
-.bg-glow2{
-  position:fixed;
-  width:500px;height:500px;
-  border-radius:50%;
-  background:radial-gradient(circle, rgba(79,140,255,0.05) 0%, transparent 70%);
-  bottom:-150px;right:-150px;
-  animation:glowPulse 10s ease-in-out infinite reverse;
-}
+.bg-glow{position:fixed;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,160,0.06) 0%,transparent 70%);top:-200px;left:-200px;animation:glowPulse 8s ease-in-out infinite}
+.bg-glow2{position:fixed;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(79,140,255,0.05) 0%,transparent 70%);bottom:-150px;right:-150px;animation:glowPulse 10s ease-in-out infinite reverse}
 @keyframes glowPulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.1)}}
 
-/* Login card */
-.card{
-  position:relative;z-index:10;
-  width:420px;
-  background:rgba(15,21,32,0.9);
-  border:1px solid rgba(0,229,160,0.15);
-  border-radius:20px;
-  padding:48px 40px;
-  box-shadow:0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,229,160,0.05);
-  backdrop-filter:blur(20px);
-  animation:cardIn .6s cubic-bezier(.16,1,.3,1);
-}
+.card{position:relative;z-index:10;width:420px;background:rgba(15,21,32,0.9);border:1px solid rgba(0,229,160,0.15);border-radius:20px;padding:44px 40px;box-shadow:0 24px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(0,229,160,0.05);backdrop-filter:blur(20px);animation:cardIn .6s cubic-bezier(.16,1,.3,1)}
 @keyframes cardIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 
-.logo{
-  display:flex;align-items:center;gap:14px;
-  margin-bottom:36px;
-}
-.logo-icon{
-  width:48px;height:48px;border-radius:12px;
-  background:linear-gradient(135deg,#00e5a0,#4f8cff);
-  display:flex;align-items:center;justify-content:center;
-  font-size:22px;
-  box-shadow:0 4px 20px rgba(0,229,160,0.3);
-}
+.logo{display:flex;align-items:center;gap:14px;margin-bottom:32px}
+.logo-icon{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#00e5a0,#4f8cff);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 20px rgba(0,229,160,0.3)}
 .logo-text{display:flex;flex-direction:column;line-height:1.1}
-.logo-name{font-size:18px;font-weight:700;letter-spacing:-0.3px}
+.logo-name{font-size:18px;font-weight:700;letter-spacing:-.3px}
 .logo-sub{font-size:11px;color:#4f6a90;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
 
-.card-title{
-  font-size:22px;font-weight:700;
-  margin-bottom:8px;letter-spacing:-0.3px;
-}
-.card-sub{font-size:13px;color:#6b82a6;line-height:1.5;margin-bottom:32px}
+/* TABS */
+.tabs{display:flex;gap:0;margin-bottom:28px;background:rgba(255,255,255,0.04);border-radius:10px;padding:3px}
+.tab{flex:1;padding:9px;border:none;border-radius:8px;background:none;color:#6b82a6;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.tab.active{background:rgba(0,229,160,0.12);color:#00e5a0;border:1px solid rgba(0,229,160,0.2)}
 
-/* Google button */
-.btn-google{
-  width:100%;
-  display:flex;align-items:center;justify-content:center;gap:12px;
-  background:#fff;
-  border:none;border-radius:12px;
-  padding:14px 20px;
-  font-family:'DM Sans',sans-serif;
-  font-size:14px;font-weight:600;
-  color:#1a1a1a;
-  cursor:pointer;
-  transition:all .2s;
-  box-shadow:0 2px 12px rgba(0,0,0,.3);
-}
-.btn-google:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
-.btn-google:active{transform:translateY(0)}
-.btn-google svg{width:20px;height:20px;flex-shrink:0}
+/* FORM */
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.form-label{font-size:11px;font-weight:600;color:#6b82a6;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase}
+.form-input{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#e8f0fe;font-family:'DM Sans',sans-serif;font-size:14px;padding:12px 14px;outline:none;transition:all .2s;width:100%}
+.form-input:focus{border-color:rgba(0,229,160,0.5);background:rgba(0,229,160,0.05)}
+.form-input::placeholder{color:#2a3a52}
 
-.divider{
-  display:flex;align-items:center;gap:12px;
-  margin:24px 0;color:#2a3a52;font-size:11px;
-  font-family:'JetBrains Mono',monospace;letter-spacing:1px;
-}
+.btn-login{width:100%;background:linear-gradient(135deg,#00e5a0,#4f8cff);border:none;border-radius:12px;color:#000;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;padding:14px;cursor:pointer;transition:all .2s;margin-top:4px}
+.btn-login:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,229,160,0.3)}
+.btn-login:disabled{opacity:.3;cursor:not-allowed;transform:none;box-shadow:none}
+
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:#2a3a52;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:1px}
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:#1a2740}
 
-.info-box{
-  background:rgba(0,229,160,0.06);
-  border:1px solid rgba(0,229,160,0.15);
-  border-radius:10px;
-  padding:14px 16px;
-  font-size:12px;color:#6ba89e;line-height:1.6;
-}
-.info-box strong{color:#00e5a0}
+.btn-google{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;background:#fff;border:none;border-radius:12px;padding:13px 20px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#1a1a1a;cursor:pointer;transition:all .2s;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.btn-google:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.btn-google svg{width:20px;height:20px;flex-shrink:0}
 
-/* Loading state */
-.loading{
-  display:none;flex-direction:column;align-items:center;gap:16px;
-  padding:20px 0;
-}
-.spinner{
-  width:36px;height:36px;border:3px solid rgba(0,229,160,.2);
-  border-top-color:#00e5a0;border-radius:50%;
-  animation:spin .8s linear infinite;
-}
+.error-msg{display:none;margin-top:14px;padding:10px 14px;background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.2);border-radius:8px;font-size:12px;color:#ff3b5c;font-family:'JetBrains Mono',monospace}
+.loading-area{display:none;flex-direction:column;align-items:center;gap:16px;padding:20px 0}
+.spinner{width:36px;height:36px;border:3px solid rgba(0,229,160,.2);border-top-color:#00e5a0;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-text{font-size:13px;color:#6b82a6;font-family:'JetBrains Mono',monospace}
-
-.error-msg{
-  display:none;margin-top:16px;padding:10px 14px;
-  background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.2);
-  border-radius:8px;font-size:12px;color:#ff3b5c;
-}
-
-.footer{
-  margin-top:28px;text-align:center;
-  font-size:11px;color:#2a3a52;
-  font-family:'JetBrains Mono',monospace;
-}
+.footer{margin-top:24px;text-align:center;font-size:11px;color:#2a3a52;font-family:'JetBrains Mono',monospace}
 </style>
 </head>
 <body>
@@ -156,117 +69,157 @@ body{
     </div>
   </div>
 
-  <div class="card-title">Bem-vindo de volta</div>
-  <div class="card-sub">Entre com sua conta Google para acessar o sistema. Seus dados ficam salvos no seu Google Drive.</div>
-
-  <div id="loginArea">
-    <button class="btn-google" onclick="signInWithGoogle()">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-      </svg>
-      Entrar com Google
-    </button>
-
-    <div class="divider">ou</div>
-
-    <div class="info-box">
-      ℹ️ Ao entrar, o sistema criará automaticamente uma pasta <strong>Supply IQ</strong> no seu Google Drive para salvar fornecedores, requisições e NF-e importadas.
+  <div id="mainArea">
+    <div class="tabs">
+      <button class="tab active" id="tab-senha" onclick="switchTab('senha')">🔑 Email e Senha</button>
+      <button class="tab" id="tab-google" onclick="switchTab('google')">🔵 Google</button>
     </div>
+
+    <!-- LOGIN POR SENHA -->
+    <div id="panel-senha">
+      <div class="form-group">
+        <div class="form-label">Email</div>
+        <input class="form-input" type="email" id="inputEmail" placeholder="seu@email.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Senha</div>
+        <input class="form-input" type="password" id="inputSenha" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')loginSenha()">
+      </div>
+      <button class="btn-login" id="btnLoginSenha" onclick="loginSenha()">Entrar</button>
+    </div>
+
+    <!-- LOGIN GOOGLE -->
+    <div id="panel-google" style="display:none">
+      <button class="btn-google" onclick="signInWithGoogle()">
+        <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Entrar com Google
+      </button>
+      <div style="margin-top:16px;padding:12px 14px;background:rgba(79,140,255,0.07);border:1px solid rgba(79,140,255,0.15);border-radius:10px;font-size:11.5px;color:#6b82a6;line-height:1.6">
+        ℹ️ Login Google é para o <strong style="color:#4f8cff">administrador</strong>. Seus dados ficam salvos no seu Drive e são compartilhados com todos os usuários.
+      </div>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
   </div>
 
-  <div class="loading" id="loadingArea">
+  <div class="loading-area" id="loadingArea">
     <div class="spinner"></div>
-    <div class="loading-text">Autenticando…</div>
+    <div class="loading-text" id="loadingText">Verificando…</div>
   </div>
-
-  <div class="error-msg" id="errorMsg"></div>
 
   <div class="footer">© 2026 Rede de Compras · Supply IQ</div>
 </div>
 
-<!-- Google Identity Services -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 const CLIENT_ID = '490149817387-if7aeuv73795obnuqand42nkt0g8u15f.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file';
+const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
+// ─── HASH simples (SHA-256 via SubtleCrypto) ───
+async function sha256(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+// ─── Drive helpers sem token próprio ───
+// Para login por senha, lemos usuarios.json do Drive do admin
+// O token do admin fica em localStorage (persistente) quando ele loga via Google
+const ADMIN_TOKEN_KEY = 'siq_admin_token';
+const ADMIN_USER_KEY  = 'siq_admin_user';
+const USERS_FILE      = 'usuarios.json';
 
+function switchTab(t){
+  document.getElementById('tab-senha').className='tab'+(t==='senha'?' active':'');
+  document.getElementById('tab-google').className='tab'+(t==='google'?' active':'');
+  document.getElementById('panel-senha').style.display=t==='senha'?'':'none';
+  document.getElementById('panel-google').style.display=t==='google'?'':'none';
+  hideError();
+}
+
+function showLoading(msg){
+  document.getElementById('mainArea').style.display='none';
+  const la=document.getElementById('loadingArea');la.style.display='flex';
+  document.getElementById('loadingText').textContent=msg||'Carregando…';
+}
+function hideLoading(){document.getElementById('mainArea').style.display='';document.getElementById('loadingArea').style.display='none';}
+function showError(msg){const el=document.getElementById('errorMsg');el.style.display='';el.textContent=msg;}
+function hideError(){document.getElementById('errorMsg').style.display='none';}
+
+// ─── Login por senha ───
+async function loginSenha(){
+  const email = document.getElementById('inputEmail').value.trim().toLowerCase();
+  const senha = document.getElementById('inputSenha').value;
+  if(!email||!senha){showError('Preencha email e senha.');return;}
+  showLoading('Verificando credenciais…');
+  try{
+    // Precisamos do token do admin para ler usuarios.json
+    const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY);
+    if(!adminToken){
+      hideLoading();
+      showError('⚠ Admin ainda não configurou o sistema. Peça ao admin para logar com Google primeiro.');
+      return;
+    }
+    // Busca usuarios.json no Drive do admin
+    const usuarios = await readUsuarios(adminToken);
+    if(!usuarios){hideLoading();showError('⚠ Nenhum usuário cadastrado ainda. Fale com o admin.');return;}
+    const hash = await sha256(senha);
+    const user = usuarios.find(u=>u.email===email && u.senha===hash && u.ativo!==false);
+    if(!user){hideLoading();showError('Email ou senha incorretos.');return;}
+    // Salva sessão como usuário comum (usa token do admin para Drive)
+    sessionStorage.setItem('gapi_token', adminToken);
+    sessionStorage.setItem('gapi_user', JSON.stringify({name:user.nome||user.email,email:user.email,picture:'',role:user.role||'user'}));
+    window.location.href='app.html';
+  }catch(e){
+    hideLoading();showError('Erro ao verificar login: '+e.message);
+  }
+}
+
+async function readUsuarios(token){
+  try{
+    const r = await fetch(
+      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${USERS_FILE}'&fields=files(id)`,
+      {headers:{'Authorization':'Bearer '+token}}
+    );
+    if(!r.ok) return null;
+    const d = await r.json();
+    if(!d.files||!d.files[0]) return null;
+    const r2 = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${d.files[0].id}?alt=media`,
+      {headers:{'Authorization':'Bearer '+token}}
+    );
+    if(!r2.ok) return null;
+    return await r2.json();
+  }catch(e){return null;}
+}
+
+// ─── Login Google (admin) ───
 let tokenClient;
-
-window.onload = function() {
-  // Check if already logged in
-  const token = sessionStorage.getItem('gapi_token');
-  const user  = sessionStorage.getItem('gapi_user');
-  if (token && user) {
-    showLoading('Retomando sessão…');
-    window.location.href = 'app.html';
-    return;
+window.onload = function(){
+  // Se já tem sessão, vai direto
+  if(sessionStorage.getItem('gapi_token')&&sessionStorage.getItem('gapi_user')){
+    showLoading('Retomando sessão…');window.location.href='app.html';return;
   }
-
-  // Init Google Identity
-  google.accounts.id.initialize({
-    client_id: CLIENT_ID,
-    callback: handleCredential
-  });
-
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
-    callback: handleToken,
-  });
+  try{
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID, scope: SCOPES, callback: handleToken,
+    });
+  }catch(e){}
 };
-
-function signInWithGoogle() {
-  showLoading('Aguardando autorização…');
-  tokenClient.requestAccessToken({ prompt: 'consent' });
-}
-
-function handleToken(tokenResponse) {
-  if (tokenResponse.error) {
-    showError('Erro ao autenticar: ' + tokenResponse.error);
-    return;
+function signInWithGoogle(){showLoading('Aguardando autorização Google…');tokenClient.requestAccessToken({prompt:'consent'});}
+async function handleToken(resp){
+  if(resp.error){hideLoading();showError('Erro Google: '+resp.error);return;}
+  const token = resp.access_token;
+  // Salva token do admin de forma persistente (para usuarios de senha usarem)
+  localStorage.setItem(ADMIN_TOKEN_KEY, token);
+  try{
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{'Authorization':'Bearer '+token}});
+    const u = await r.json();
+    localStorage.setItem(ADMIN_USER_KEY, JSON.stringify({name:u.name,email:u.email,picture:u.picture}));
+    sessionStorage.setItem('gapi_token', token);
+    sessionStorage.setItem('gapi_user', JSON.stringify({name:u.name,email:u.email,picture:u.picture,role:'admin'}));
+  }catch(e){
+    sessionStorage.setItem('gapi_token',token);
+    sessionStorage.setItem('gapi_user',JSON.stringify({name:'Admin',email:'',picture:'',role:'admin'}));
   }
-  sessionStorage.setItem('gapi_token', tokenResponse.access_token);
-
-  // Get user info
-  fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-    headers: { 'Authorization': 'Bearer ' + tokenResponse.access_token }
-  })
-  .then(r => r.json())
-  .then(user => {
-    sessionStorage.setItem('gapi_user', JSON.stringify({
-      name: user.name,
-      email: user.email,
-      picture: user.picture
-    }));
-    showLoading('Carregando Supply IQ…');
-    setTimeout(() => { window.location.href = 'app.html'; }, 600);
-  })
-  .catch(() => {
-    sessionStorage.setItem('gapi_user', JSON.stringify({ name: 'Usuário', email: '' }));
-    window.location.href = 'app.html';
-  });
-}
-
-function handleCredential(response) {
-  // Fallback
-}
-
-function showLoading(msg) {
-  document.getElementById('loginArea').style.display = 'none';
-  const la = document.getElementById('loadingArea');
-  la.style.display = 'flex';
-  la.querySelector('.loading-text').textContent = msg;
-}
-
-function showError(msg) {
-  document.getElementById('loginArea').style.display = '';
-  document.getElementById('loadingArea').style.display = 'none';
-  const el = document.getElementById('errorMsg');
-  el.style.display = '';
-  el.textContent = msg;
+  showLoading('Entrando…');setTimeout(()=>{window.location.href='app.html';},500);
 }
 </script>
 </body>
