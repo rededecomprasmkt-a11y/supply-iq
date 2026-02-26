@@ -443,10 +443,16 @@ async function gasCall(action, extra={}){
   // Solução: GET para leituras (sem body grande), POST text/plain para escritas.
   const readActions = ['login','getUsuarios','getFornecedores','getRequisicoes','getNfe','getAllData'];
   if(readActions.includes(action)){
-    const qs = encodeURIComponent(JSON.stringify(payload));
-    const resp = await fetch(url + '?payload=' + qs, { redirect: 'follow' });
+    // Passa key e action como params diretos + payload completo
+    const qs = new URLSearchParams({
+      key: SECRET_KEY,
+      action: action,
+      payload: JSON.stringify(payload)
+    }).toString();
+    const resp = await fetch(url + '?' + qs, { redirect: 'follow' });
     if(!resp.ok) throw new Error('HTTP '+resp.status);
-    return await resp.json();
+    const text = await resp.text();
+    try { return JSON.parse(text); } catch(e) { throw new Error('Resposta inválida: ' + text.slice(0,200)); }
   }
   // Escritas: POST com text/plain evita preflight CORS
   const resp = await fetch(url, {
@@ -456,7 +462,8 @@ async function gasCall(action, extra={}){
     redirect: 'follow'
   });
   if(!resp.ok) throw new Error('HTTP '+resp.status);
-  return await resp.json();
+  const text = await resp.text();
+  try { return JSON.parse(text); } catch(e) { throw new Error('Resposta inválida: ' + text.slice(0,200)); }
 }
 
 // ═══ GOOGLE DRIVE API ═══
