@@ -78,14 +78,34 @@ body{background:#080d14;color:#e8f0fe;font-family:'DM Sans',sans-serif;display:f
       <button class="btn-login" onclick="loginSenha()">Entrar</button>
     </div>
 
-    <!-- LOGIN GOOGLE (ADMIN) -->
+    <!-- PAINEL ADMIN -->
     <div id="panel-google" style="display:none">
-      <button class="btn-google" onclick="signInWithGoogle()">
-        <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-        Entrar com Google
+
+      <!-- PASSO 1: URL do Apps Script -->
+      <div style="margin-bottom:18px">
+        <div class="form-label" style="margin-bottom:6px">🔗 PASSO 1 — URL do Apps Script</div>
+        <input class="form-input" type="url" id="inputApiUrl"
+          placeholder="https://script.google.com/macros/s/…/exec"
+          style="font-family:'JetBrains Mono',monospace;font-size:11px"
+          onblur="salvarApiUrl(this.value)">
+        <div id="apiStatus" style="font-size:11px;margin-top:5px;font-family:'JetBrains Mono',monospace;color:#4f6a90">
+          Cole a URL gerada no Google Apps Script.
+        </div>
+      </div>
+
+      <!-- PASSO 2: Senha admin -->
+      <div class="form-label" style="margin-bottom:6px">🔑 PASSO 2 — Senha do Admin</div>
+      <div class="form-group" style="margin-bottom:10px">
+        <input class="form-input" type="password" id="inputAdminSenha"
+          placeholder="Senha do admin (padrão: admin123)"
+          onkeydown="if(event.key==='Enter')loginAdmin()">
+      </div>
+      <button class="btn-login" style="background:linear-gradient(135deg,#4f8cff,#7c5cbf)" onclick="loginAdmin()">
+        Entrar como Admin
       </button>
-      <div class="info-box">
-        ℹ️ Login Google é exclusivo para o <strong style="color:#4f8cff">administrador</strong>. Após entrar, configure o Apps Script em ⚙️ para sincronizar dados entre todos os usuários.
+
+      <div class="info-box" style="margin-top:14px;font-size:11px">
+        💡 A senha padrão do admin é <strong style="color:#ffd34e;font-family:'JetBrains Mono',monospace">admin123</strong>. Você pode criar um usuário admin na planilha do Apps Script para trocar.
       </div>
     </div>
 
@@ -100,11 +120,8 @@ body{background:#080d14;color:#e8f0fe;font-family:'DM Sans',sans-serif;display:f
   <div class="footer">© 2026 Rede de Compras · Supply IQ</div>
 </div>
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-const CLIENT_ID  = '490149817387-if7aeuv73795obnuqand42nkt0g8u15f.apps.googleusercontent.com';
-const SCOPES     = 'https://www.googleapis.com/auth/drive.appdata';
-const API_KEY    = 'supplyiq2026';
+const API_KEY = 'supplyiq2026';
 
 async function sha256(str){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -127,7 +144,7 @@ function hideLoading(){ document.getElementById('mainArea').style.display=''; do
 function showError(msg){ const el=document.getElementById('errorMsg'); el.style.display=''; el.textContent=msg; }
 function hideError(){ document.getElementById('errorMsg').style.display='none'; }
 
-// ── Login por senha via Apps Script ──────────────────────────
+// ── Login usuário normal (via Apps Script) ───────────────────
 async function loginSenha(){
   const email = document.getElementById('inputEmail').value.trim().toLowerCase();
   const senha = document.getElementById('inputSenha').value;
@@ -135,21 +152,24 @@ async function loginSenha(){
 
   const apiUrl = localStorage.getItem('siq_api_url');
   if(!apiUrl){
-    showError('⚠ Sistema não configurado ainda. Aguarde o admin configurar o backend.');
+    showError('⚠ URL do sistema não configurada. Vá na aba Admin e configure.');
     return;
   }
 
-  showLoading('Verificando credenciais…');
+  const btn = document.getElementById('btnLoginSenha');
+  btn.disabled = true; btn.textContent = '⏳ Verificando…';
+  hideError();
+
   try{
     const senhaHash = await sha256(senha);
     const r = await fetch(apiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {'Content-Type':'text/plain'},
       body: JSON.stringify({ action:'login', key: API_KEY, email, senhaHash })
     });
     const d = await r.json();
-    if(!d.ok){ hideLoading(); showError(d.error||'Email ou senha incorretos.'); return; }
-    sessionStorage.setItem('gapi_token', 'gas_user'); // sinaliza que é usuário GAS
+    if(!d.ok){ showError(d.error||'Email ou senha incorretos.'); return; }
+    sessionStorage.setItem('gapi_token', 'gas_user');
     sessionStorage.setItem('gapi_user', JSON.stringify({
       name: d.user.nome||d.user.email,
       email: d.user.email,
@@ -159,39 +179,87 @@ async function loginSenha(){
     showLoading('Entrando…');
     setTimeout(()=>{ window.location.href='app.html'; }, 400);
   }catch(e){
-    hideLoading(); showError('Erro de conexão: '+e.message);
+    showError('Erro de conexão: '+e.message);
+  } finally {
+    btn.disabled=false; btn.textContent='Entrar';
   }
 }
 
-// ── Login Google (admin) ──────────────────────────────────────
-let tokenClient;
+// ── Login admin ──────────────────────────────────────────────
+// Senha padrão: admin123 (hash SHA-256 guardado no localStorage)
+const ADMIN_HASH_KEY = 'siq_admin_hash';
+const DEFAULT_ADMIN_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a'; // sha256('admin123')
+
+async function loginAdmin(){
+  const senha  = document.getElementById('inputAdminSenha').value;
+  if(!senha){ showError('Digite a senha do admin.'); return; }
+
+  const apiUrl = localStorage.getItem('siq_api_url');
+  if(!apiUrl){ showError('Cole a URL do Apps Script no campo acima primeiro.'); return; }
+
+  const btn = document.querySelector('#panel-google .btn-login');
+  btn.disabled = true; btn.textContent = '⏳ Verificando…';
+  hideError();
+
+  try{
+    const senhaHash = await sha256(senha);
+    // Usa o hash salvo ou o padrão
+    const adminHash = localStorage.getItem(ADMIN_HASH_KEY) || DEFAULT_ADMIN_HASH;
+
+    if(senhaHash !== adminHash){
+      showError('Senha do admin incorreta. Padrão: admin123');
+      return;
+    }
+
+    // Testa conexão com a API
+    showLoading('Conectando à API…');
+    const r = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain'},
+      body: JSON.stringify({ action:'getAllData', key: API_KEY })
+    });
+    if(!r.ok) throw new Error('API retornou HTTP '+r.status);
+
+    sessionStorage.setItem('gapi_token', 'gas_admin');
+    sessionStorage.setItem('gapi_user', JSON.stringify({
+      name: 'Admin',
+      email: 'admin',
+      picture: '',
+      role: 'admin'
+    }));
+    showLoading('Entrando…');
+    setTimeout(()=>{ window.location.href='app.html'; }, 400);
+  }catch(e){
+    hideLoading();
+    showError('Erro: '+e.message);
+  } finally {
+    btn.disabled=false; btn.textContent='Entrar como Admin';
+  }
+}
+
+// ── Salvar URL do Apps Script ────────────────────────────────
+function salvarApiUrl(url){
+  url = url.trim();
+  const st = document.getElementById('apiStatus');
+  if(!url){ localStorage.removeItem('siq_api_url'); st.textContent='URL removida.'; st.style.color='#ff3b5c'; return; }
+  localStorage.setItem('siq_api_url', url);
+  st.textContent = '✅ URL salva!';
+  st.style.color = '#00e5a0';
+}
+
 window.onload = function(){
   if(sessionStorage.getItem('gapi_token') && sessionStorage.getItem('gapi_user')){
     showLoading('Retomando sessão…'); window.location.href='app.html'; return;
   }
-  try{
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID, scope: SCOPES, callback: handleToken,
-    });
-  }catch(e){}
-};
-function signInWithGoogle(){ showLoading('Aguardando autorização Google…'); tokenClient.requestAccessToken({prompt:'consent'}); }
-
-async function handleToken(resp){
-  if(resp.error){ hideLoading(); showError('Erro Google: '+resp.error); return; }
-  const token = resp.access_token;
-  try{
-    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{'Authorization':'Bearer '+token}});
-    const u = await r.json();
-    sessionStorage.setItem('gapi_token', token);
-    sessionStorage.setItem('gapi_user', JSON.stringify({name:u.name,email:u.email,picture:u.picture,role:'admin'}));
-  }catch(e){
-    sessionStorage.setItem('gapi_token', token);
-    sessionStorage.setItem('gapi_user', JSON.stringify({name:'Admin',email:'',picture:'',role:'admin'}));
+  // Preenche URL salva
+  const savedUrl = localStorage.getItem('siq_api_url');
+  const inp = document.getElementById('inputApiUrl');
+  if(inp && savedUrl){
+    inp.value = savedUrl;
+    const st = document.getElementById('apiStatus');
+    if(st){ st.textContent='✅ URL configurada e salva.'; st.style.color='#00e5a0'; }
   }
-  showLoading('Entrando…');
-  setTimeout(()=>{ window.location.href='app.html'; }, 400);
-}
+};
 </script>
 </body>
 </html>
