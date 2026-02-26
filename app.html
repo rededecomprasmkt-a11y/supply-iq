@@ -443,27 +443,35 @@ function driveAuthHeader(){
 }
 
 async function driveInit(){
-  S.driveToken = sessionStorage.getItem('gapi_token');
-  if(!S.driveToken){ window.location.href='index.html'; return; }
+  const rawToken = sessionStorage.getItem('gapi_token');
+  // Sem sessão alguma → volta para login
+  if(!rawToken){ window.location.href='index.html'; return; }
 
-  // Verifica se o token ainda é válido antes de usar
-  try{
-    const testR = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token='+S.driveToken);
-    const testData = await testR.json();
-    if(testData.error){
-      // Token expirado — tenta renovar se é admin
-      const newToken = await renovarTokenSilencioso();
-      if(newToken){
-        S.driveToken = newToken;
-        sessionStorage.setItem('gapi_token', newToken);
-        localStorage.setItem('siq_admin_token', newToken);
-      } else {
-        // Usuário normal com token expirado — mostra aviso mas carrega dados locais
-        setSyncDot('error');
-        showTokenWarning();
+  // 'password_auth' = usuário entrou por email/senha sem token de Drive válido
+  // Nesse caso carrega dados do localStorage e desativa sync com Drive
+  const isPasswordAuth = rawToken === 'password_auth';
+  S.driveToken = isPasswordAuth ? null : rawToken;
+
+  if(!isPasswordAuth){
+    // Verifica se o token do Drive ainda é válido
+    try{
+      const testR = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token='+S.driveToken);
+      const testData = await testR.json();
+      if(testData.error){
+        // Token expirado — tenta renovar silenciosamente
+        const newToken = await renovarTokenSilencioso();
+        if(newToken){
+          S.driveToken = newToken;
+          sessionStorage.setItem('gapi_token', newToken);
+          localStorage.setItem('siq_admin_token', newToken);
+        } else {
+          S.driveToken = null;
+          setSyncDot('error');
+          showTokenWarning();
+        }
       }
-    }
-  } catch(e){ /* ignora falha de verificação */ }
+    } catch(e){ /* ignora falha de verificação */ }
+  }
 
   // Show user info
   try{
@@ -481,6 +489,20 @@ async function driveInit(){
   }catch(e){}
 
   // Find or create appDataFolder file structure
+  if(!S.driveToken){
+    // Sem token Drive — carrega dados do localStorage
+    setSyncDot('error');
+    loadLocal();
+    renderFornecList(); renderNfeHist();
+    document.getElementById('sb-forn-badge').textContent=S.fornecedores.length;
+    if(S.requisicoes.length>0){
+      document.getElementById('sb-req-badge').style.display='';
+      document.getElementById('sb-req-badge').textContent=S.requisicoes.length;
+    }
+    showTokenWarning();
+    return;
+  }
+
   setSyncDot('syncing');
   try {
     await ensureDriveFiles();
@@ -495,10 +517,13 @@ async function driveInit(){
     toast('✅ Dados carregados do Google Drive','success');
   } catch(e) {
     console.error('Drive init error:',e);
-    // Token may be expired — redirect to login
     if(e.status===401){
-      sessionStorage.clear();
-      window.location.href='index.html';
+      // Token inválido — carrega local e mostra aviso
+      S.driveToken = null;
+      setSyncDot('error');
+      loadLocal();
+      renderFornecList(); renderNfeHist();
+      showTokenWarning();
       return;
     }
     setSyncDot('error');
@@ -532,13 +557,18 @@ function renovarTokenSilencioso(){
 }
 
 function showTokenWarning(){
-  // Cria banner de aviso de token expirado
   const existing = document.getElementById('tokenWarningBar');
   if(existing) return;
+  const u = JSON.parse(sessionStorage.getItem('gapi_user')||'{}');
+  const isAdmin = u.role === 'admin';
   const bar = document.createElement('div');
   bar.id = 'tokenWarningBar';
   bar.style.cssText = 'background:rgba(255,211,78,0.1);border-bottom:1px solid rgba(255,211,78,0.3);padding:7px 18px;font-family:var(--mono);font-size:11px;color:var(--yellow);display:flex;align-items:center;gap:10px;flex-shrink:0;z-index:50';
-  bar.innerHTML = `⚠ Sessão expirada — salvamento no Drive desativado. Dados salvos localmente. <button onclick="reautenticar()" style="background:var(--yellow);color:#000;border:none;border-radius:5px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--mono)">🔄 Renovar sessão</button>`;
+  if(isAdmin){
+    bar.innerHTML = `⚠ Sessão Drive expirada — salvamento desativado. Dados locais preservados. <button onclick="reautenticar()" style="background:var(--yellow);color:#000;border:none;border-radius:5px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--mono)">🔄 Renovar sessão</button>`;
+  } else {
+    bar.innerHTML = `⚠ Sem sincronização com Drive — trabalhando com dados locais. Peça ao admin para renovar a sessão Google para reativar o sync.`;
+  }
   document.querySelector('.layout').before(bar);
 }
 
