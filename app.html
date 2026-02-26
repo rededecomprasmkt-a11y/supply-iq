@@ -427,7 +427,30 @@ const S={
   driveToken:null,driveFolderId:null,fileIds:{},syncQueue:{},syncTimer:null
 };
 
+// ═══ CONFIG GAS ═══
+const SECRET_KEY = 'supplyiq2026'; // Igual ao do Apps Script
+
+function gasUrl(){
+  return sessionStorage.getItem('siq_gas_url') || localStorage.getItem('siq_gas_url') || '';
+}
+
+async function gasCall(action, extra={}){
+  const url = gasUrl();
+  if(!url) throw new Error('URL do backend (Apps Script) não configurada.');
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'text/plain'},
+    body: JSON.stringify({ action, key: SECRET_KEY, ...extra })
+  });
+  if(!resp.ok) throw new Error('HTTP '+resp.status);
+  return await resp.json();
+}
+
 // ═══ GOOGLE DRIVE API ═══
+function isGasMode(){
+  return S.driveToken === 'gas_mode';
+}
+
 function driveHeaders(){
   return {'Authorization':'Bearer '+S.driveToken,'Content-Type':'application/json'};
 }
@@ -443,19 +466,23 @@ async function driveInit(){
     const av = document.getElementById('userAvatar');
     if(u.picture){ av.innerHTML=`<img src="${u.picture}" alt="">`; }
     else{ av.textContent=(u.name||'U')[0].toUpperCase(); }
-    // Mostra aba de usuários só para admin (logado via Google)
+    // Mostra aba de usuários só para admin
     if(u.role==='admin'){
       document.getElementById('tab-usuarios').style.display='';
       document.getElementById('sb-usuarios').style.display='';
-      localStorage.setItem('siq_admin_token', S.driveToken);
     }
   }catch(e){}
 
-  // Find or create appDataFolder file structure
   setSyncDot('syncing');
   try {
-    await ensureDriveFiles();
-    await loadFromDrive();
+    if(isGasMode()){
+      // Usuários de senha: carrega tudo via Apps Script
+      await loadFromGas();
+    } else {
+      // Admin via OAuth: carrega do Drive
+      await ensureDriveFiles();
+      await loadFromDrive();
+    }
     setSyncDot('ok');
     renderFornecList(); renderNfeHist();
     document.getElementById('sb-forn-badge').textContent=S.fornecedores.length;
@@ -463,20 +490,32 @@ async function driveInit(){
       document.getElementById('sb-req-badge').style.display='';
       document.getElementById('sb-req-badge').textContent=S.requisicoes.length;
     }
-    toast('✅ Dados carregados do Google Drive','success');
+    toast('✅ Dados carregados','success');
   } catch(e) {
-    console.error('Drive init error:',e);
-    // Token may be expired — redirect to login
-    if(e.status===401){
-      sessionStorage.clear();
-      window.location.href='index.html';
-      return;
-    }
+    console.error('Init error:',e);
+    if(e.status===401){ sessionStorage.clear(); window.location.href='index.html'; return; }
     setSyncDot('error');
-    toast('⚠ Erro ao conectar com Drive. Usando dados locais.','warning');
+    toast('⚠ Erro ao conectar. Usando dados locais.','warning');
     loadLocal();
     renderFornecList(); renderNfeHist();
   }
+}
+
+// ═══ LOAD / SAVE via GAS ═══
+async function loadFromGas(){
+  const result = await gasCall('getAllData');
+  if(!result.ok) throw new Error(result.error||'Erro GAS');
+  if(Array.isArray(result.fornecedores)) S.fornecedores = result.fornecedores;
+  if(Array.isArray(result.requisicoes))  S.requisicoes  = result.requisicoes;
+  if(Array.isArray(result.nfe))          S.nfeHistory   = result.nfe;
+  saveLocal();
+}
+
+async function saveToGas(key){
+  const data = key==='fornecedores'?S.fornecedores:key==='requisicoes'?S.requisicoes:S.nfeHistory;
+  const action = key==='fornecedores'?'saveFornecedores':key==='requisicoes'?'saveRequisicoes':'saveNfe';
+  const result = await gasCall(action, {data});
+  if(!result.ok) throw new Error(result.error||'Erro ao salvar');
 }
 
 async function ensureDriveFiles(){
@@ -573,10 +612,9 @@ function loadLocal(){
   }catch(e){}
 }
 
-// Debounced save — batches rapid changes into one Drive write
+// Debounced save — batches rapid changes into one write (Drive ou GAS)
 function save(key){
   saveLocal();
-  if(!S.driveToken) return;
   if(S.syncTimer) clearTimeout(S.syncTimer);
   if(key) S.syncQueue[key]=true; else {S.syncQueue.fornecedores=true;S.syncQueue.requisicoes=true;S.syncQueue.nfe=true;}
   setSyncDot('syncing');
@@ -584,16 +622,22 @@ function save(key){
     try{
       const keys = Object.keys(S.syncQueue);
       S.syncQueue={};
-      for(const k of keys){
-        const data = k==='fornecedores'?S.fornecedores:k==='requisicoes'?S.requisicoes:S.nfeHistory;
-        await driveWriteFile(k, data);
+      if(isGasMode()){
+        // Salva via Apps Script (compartilhado entre todos)
+        for(const k of keys) await saveToGas(k);
+      } else {
+        // Admin: salva no Drive
+        for(const k of keys){
+          const data = k==='fornecedores'?S.fornecedores:k==='requisicoes'?S.requisicoes:S.nfeHistory;
+          await driveWriteFile(k, data);
+        }
       }
       setSyncDot('ok');
     }catch(e){
       console.error('Sync error:',e);
       if(e.status===401){ sessionStorage.clear(); window.location.href='index.html'; return; }
       setSyncDot('error');
-      toast('⚠ Erro ao salvar no Drive','warning');
+      toast('⚠ Erro ao salvar','warning');
     }
   }, 1200);
 }
@@ -999,9 +1043,7 @@ function nfeAtualizarCustos(chave){
 }
 function nfeDelete(chave){if(!confirm('Remover?'))return;S.nfeHistory=S.nfeHistory.filter(n=>n.chave!==chave);S.activeNfe=null;save('nfe');renderNfeHist();document.getElementById('nfeRight').innerHTML='<div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">NF removida</div></div>'}
 
-// ═══ USUÁRIOS (admin only) ═══
-const USERS_FILE = 'usuarios.json';
-let usuariosFileId = null;
+// ═══ USUÁRIOS (admin only — via Apps Script) ═══
 
 async function sha256(str){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -1010,44 +1052,21 @@ async function sha256(str){
 
 async function loadUsuarios(){
   try{
-    const r = await fetch(
-      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${USERS_FILE}'&fields=files(id)`,
-      {headers:{'Authorization':'Bearer '+S.driveToken}}
-    );
-    if(!r.ok) return [];
-    const d = await r.json();
-    if(!d.files||!d.files[0]) return [];
-    usuariosFileId = d.files[0].id;
-    const r2 = await fetch(`https://www.googleapis.com/drive/v3/files/${usuariosFileId}?alt=media`,{headers:{'Authorization':'Bearer '+S.driveToken}});
-    if(!r2.ok) return [];
-    return await r2.json();
-  }catch(e){return [];}
+    const result = await gasCall('getUsuarios');
+    if(!result.ok) return [];
+    return result.data || [];
+  }catch(e){ return []; }
 }
 
 async function saveUsuarios(lista){
-  const content = JSON.stringify(lista);
-  const blob = new Blob([content],{type:'application/json'});
-  const form = new FormData();
-  if(usuariosFileId){
-    form.append('metadata',new Blob([JSON.stringify({name:USERS_FILE})],{type:'application/json'}));
-    form.append('file',blob);
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${usuariosFileId}?uploadType=multipart`,
-      {method:'PATCH',headers:{'Authorization':'Bearer '+S.driveToken},body:form});
-  }else{
-    form.append('metadata',new Blob([JSON.stringify({name:USERS_FILE,parents:['appDataFolder']})],{type:'application/json'}));
-    form.append('file',blob);
-    const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
-      {method:'POST',headers:{'Authorization':'Bearer '+S.driveToken},body:form});
-    const d = await r.json();
-    usuariosFileId = d.id;
-  }
-  // Atualiza token admin no localStorage para login por senha funcionar
-  localStorage.setItem('siq_admin_token', S.driveToken);
+  const result = await gasCall('saveUsuarios', {data: lista});
+  if(!result.ok) throw new Error(result.error||'Erro ao salvar usuários');
 }
 
 async function renderUsuarios(){
-  const lista = await loadUsuarios();
   const el = document.getElementById('usuariosList');
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-family:var(--mono);font-size:11px">⏳ Carregando…</div>';
+  const lista = await loadUsuarios();
   if(!lista||!lista.length){
     el.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum usuário</div><div class="empty-sub">Crie o primeiro usuário para liberar o acesso por email e senha.</div></div>';
     return;
@@ -1058,6 +1077,7 @@ async function renderUsuarios(){
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:700">${u.nome||'—'}</div>
         <div style="font-family:var(--mono);font-size:11px;color:var(--text2)">${u.email}</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3)">${u.role||'user'} · criado ${u.criadoEm?new Date(u.criadoEm).toLocaleDateString('pt-BR'):'-'}</div>
       </div>
       <span style="font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:5px;${u.ativo===false?'background:var(--red-dim);color:var(--red);border:1px solid rgba(255,59,92,.3)':'background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,229,160,.3)'}">${u.ativo===false?'INATIVO':'ATIVO'}</span>
       <button class="btn btn-ghost" style="font-size:11px" onclick="toggleUsuario('${u.email}')">${u.ativo===false?'Ativar':'Desativar'}</button>
@@ -1081,32 +1101,40 @@ async function criarUsuario(){
   const senha = document.getElementById('nu-senha').value;
   if(!nome||!email||!senha){toast('⚠ Preencha todos os campos','error');return;}
   if(senha.length<6){toast('⚠ Senha deve ter pelo menos 6 caracteres','error');return;}
-  const lista = await loadUsuarios();
-  if(lista.find(u=>u.email===email)){toast('⚠ Email já cadastrado','error');return;}
-  const hash = await sha256(senha);
-  lista.push({nome,email,senha:hash,role:'user',ativo:true,criadoEm:new Date().toISOString()});
-  await saveUsuarios(lista);
-  fecharModalNovoUsuario();
-  renderUsuarios();
-  toast(`✅ Usuário "${nome}" criado com sucesso!`,'success');
+  try{
+    const lista = await loadUsuarios();
+    if(lista.find(u=>u.email===email)){toast('⚠ Email já cadastrado','error');return;}
+    const hash = await sha256(senha);
+    lista.push({nome,email,senha:hash,role:'user',ativo:true,criadoEm:new Date().toISOString()});
+    await saveUsuarios(lista);
+    fecharModalNovoUsuario();
+    renderUsuarios();
+    toast(`✅ Usuário "${nome}" criado com sucesso!`,'success');
+  }catch(e){
+    toast('❌ Erro ao criar usuário: '+e.message,'error');
+  }
 }
 
 async function deletarUsuario(email){
   if(!confirm(`Excluir usuário ${email}?`))return;
-  let lista = await loadUsuarios();
-  lista = lista.filter(u=>u.email!==email);
-  await saveUsuarios(lista);
-  renderUsuarios();
-  toast('Usuário removido','');
+  try{
+    let lista = await loadUsuarios();
+    lista = lista.filter(u=>u.email!==email);
+    await saveUsuarios(lista);
+    renderUsuarios();
+    toast('Usuário removido','');
+  }catch(e){ toast('❌ Erro: '+e.message,'error'); }
 }
 
 async function toggleUsuario(email){
-  const lista = await loadUsuarios();
-  const u = lista.find(x=>x.email===email);
-  if(u) u.ativo = u.ativo===false?true:false;
-  await saveUsuarios(lista);
-  renderUsuarios();
-  toast(u?.ativo?'Usuário ativado':'Usuário desativado','');
+  try{
+    const lista = await loadUsuarios();
+    const u = lista.find(x=>x.email===email);
+    if(u) u.ativo = u.ativo===false?true:false;
+    await saveUsuarios(lista);
+    renderUsuarios();
+    toast(u?.ativo?'Usuário ativado':'Usuário desativado','');
+  }catch(e){ toast('❌ Erro: '+e.message,'error'); }
 }
 
 // ═══ TOAST ═══
