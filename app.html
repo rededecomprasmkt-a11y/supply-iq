@@ -1099,40 +1099,64 @@ async function sha256(str){
 }
 
 async function loadUsuarios(){
+  // Tenta Drive primeiro (fonte da verdade quando online)
   try{
     const r = await fetch(
       `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${USERS_FILE}'&fields=files(id)`,
       {headers:{'Authorization':'Bearer '+S.driveToken}}
     );
-    if(!r.ok) return [];
-    const d = await r.json();
-    if(!d.files||!d.files[0]) return [];
-    usuariosFileId = d.files[0].id;
-    const r2 = await fetch(`https://www.googleapis.com/drive/v3/files/${usuariosFileId}?alt=media`,{headers:{'Authorization':'Bearer '+S.driveToken}});
-    if(!r2.ok) return [];
-    return await r2.json();
-  }catch(e){return [];}
+    if(r.ok){
+      const d = await r.json();
+      if(d.files&&d.files[0]){
+        usuariosFileId = d.files[0].id;
+        const r2 = await fetch(`https://www.googleapis.com/drive/v3/files/${usuariosFileId}?alt=media`,{headers:{'Authorization':'Bearer '+S.driveToken}});
+        if(r2.ok){
+          const lista = await r2.json();
+          // Atualiza cache local com dados do Drive
+          localStorage.setItem('siq_usuarios_cache', JSON.stringify(lista));
+          localStorage.setItem('siq_usuarios_updated', new Date().toISOString());
+          return lista;
+        }
+      }
+    }
+  }catch(e){
+    console.warn('Drive load failed, using localStorage cache');
+  }
+  // Fallback: localStorage cache (funciona mesmo com token expirado)
+  try{
+    const cache = localStorage.getItem('siq_usuarios_cache');
+    if(cache) return JSON.parse(cache);
+  }catch(e){}
+  return [];
 }
 
 async function saveUsuarios(lista){
-  const content = JSON.stringify(lista);
-  const blob = new Blob([content],{type:'application/json'});
-  const form = new FormData();
-  if(usuariosFileId){
-    form.append('metadata',new Blob([JSON.stringify({name:USERS_FILE})],{type:'application/json'}));
-    form.append('file',blob);
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${usuariosFileId}?uploadType=multipart`,
-      {method:'PATCH',headers:{'Authorization':'Bearer '+S.driveToken},body:form});
-  }else{
-    form.append('metadata',new Blob([JSON.stringify({name:USERS_FILE,parents:['appDataFolder']})],{type:'application/json'}));
-    form.append('file',blob);
-    const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
-      {method:'POST',headers:{'Authorization':'Bearer '+S.driveToken},body:form});
-    const d = await r.json();
-    usuariosFileId = d.id;
-  }
-  // Atualiza token admin no localStorage para login por senha funcionar
+  // SEMPRE salva no localStorage — cache permanente para login offline/token expirado
+  localStorage.setItem('siq_usuarios_cache', JSON.stringify(lista));
+  localStorage.setItem('siq_usuarios_updated', new Date().toISOString());
   localStorage.setItem('siq_admin_token', S.driveToken);
+
+  // Tenta salvar no Drive (best-effort)
+  try{
+    const content = JSON.stringify(lista);
+    const blob = new Blob([content],{type:'application/json'});
+    const form = new FormData();
+    if(usuariosFileId){
+      form.append('metadata',new Blob([JSON.stringify({name:USERS_FILE})],{type:'application/json'}));
+      form.append('file',blob);
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${usuariosFileId}?uploadType=multipart`,
+        {method:'PATCH',headers:{'Authorization':'Bearer '+S.driveToken},body:form});
+    }else{
+      form.append('metadata',new Blob([JSON.stringify({name:USERS_FILE,parents:['appDataFolder']})],{type:'application/json'}));
+      form.append('file',blob);
+      const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+        {method:'POST',headers:{'Authorization':'Bearer '+S.driveToken},body:form});
+      const d = await r.json();
+      usuariosFileId = d.id;
+    }
+  }catch(e){
+    console.warn('Drive save failed for usuarios, but localStorage cache is updated:', e);
+  }
 }
 
 async function renderUsuarios(){
@@ -1147,7 +1171,9 @@ async function renderUsuarios(){
         statusBar.style.cssText += ';border-color:rgba(255,59,92,0.3);background:rgba(255,59,92,0.07);color:var(--red)';
       } else {
         const mins = Math.round(parseInt(testData.expires_in)/60);
-        statusBar.innerHTML = `✅ <strong style="color:var(--accent)">Drive conectado.</strong> Token expira em <strong style="color:var(--yellow)">${mins} min</strong>. Usuários criados aqui poderão fazer login pela tela de email/senha.`;
+        const updated = localStorage.getItem('siq_usuarios_updated');
+        const updStr = updated ? ' · Cache: '+new Date(updated).toLocaleString('pt-BR') : '';
+        statusBar.innerHTML = `✅ <strong style="color:var(--accent)">Drive conectado.</strong> Token expira em <strong style="color:var(--yellow)">${mins} min</strong>. Usuários criados aqui podem logar imediatamente (cache local permanente)${updStr}.`;
         statusBar.style.cssText += ';border-color:rgba(0,229,160,0.2);background:rgba(0,229,160,0.05)';
       }
     }catch(e){

@@ -122,12 +122,10 @@ async function sha256(str){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-// ─── Drive helpers sem token próprio ───
-// Para login por senha, lemos usuarios.json do Drive do admin
-// O token do admin fica em localStorage (persistente) quando ele loga via Google
-const ADMIN_TOKEN_KEY = 'siq_admin_token';
-const ADMIN_USER_KEY  = 'siq_admin_user';
-const USERS_FILE      = 'usuarios.json';
+// ─── Config ───
+const ADMIN_TOKEN_KEY  = 'siq_admin_token';
+const ADMIN_USER_KEY   = 'siq_admin_user';
+// siq_usuarios_cache = localStorage cache permanente dos usuários (não expira)
 
 function switchTab(t){
   document.getElementById('tab-senha').className='tab'+(t==='senha'?' active':'');
@@ -148,81 +146,75 @@ function showError(msg){const el=document.getElementById('errorMsg');el.style.di
 function hideError(){document.getElementById('errorMsg').style.display='none';}
 
 // ─── Login por senha ───
+// Usa cache local (localStorage) — NÃO depende do token do admin estar válido
 async function loginSenha(){
   const email = document.getElementById('inputEmail').value.trim().toLowerCase();
   const senha = document.getElementById('inputSenha').value;
   if(!email||!senha){showError('Preencha email e senha.');return;}
   showLoading('Verificando credenciais…');
   try{
-    // Tenta renovar token do admin silenciosamente primeiro
-    let adminToken = localStorage.getItem(ADMIN_TOKEN_KEY);
-    if(!adminToken){
+    // 1. Tenta carregar usuários do cache local (funciona mesmo com token expirado)
+    let usuarios = null;
+    const cache = localStorage.getItem('siq_usuarios_cache');
+    if(cache){
+      try{ usuarios = JSON.parse(cache); }catch(e){}
+    }
+
+    // 2. Se não tem cache local, tenta buscar do Drive com o token do admin
+    if(!usuarios || !usuarios.length){
+      const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY);
+      if(adminToken){
+        showLoading('Buscando usuários do Drive…');
+        try{
+          const r = await fetch(
+            `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='usuarios.json'&fields=files(id)`,
+            {headers:{'Authorization':'Bearer '+adminToken}}
+          );
+          if(r.ok){
+            const d = await r.json();
+            if(d.files&&d.files[0]){
+              const r2 = await fetch(
+                `https://www.googleapis.com/drive/v3/files/${d.files[0].id}?alt=media`,
+                {headers:{'Authorization':'Bearer '+adminToken}}
+              );
+              if(r2.ok){
+                usuarios = await r2.json();
+                // Salva no cache para próximos logins
+                localStorage.setItem('siq_usuarios_cache', JSON.stringify(usuarios));
+              }
+            }
+          }
+        }catch(e){ console.warn('Drive fetch failed:', e); }
+      }
+    }
+
+    if(!usuarios || !usuarios.length){
       hideLoading();
-      showError('⚠ Admin ainda não configurou o sistema. Peça ao admin para logar com Google primeiro.');
+      showError('⚠ Nenhum usuário cadastrado. Peça ao admin para criar sua conta na aba "👥 Usuários".');
       return;
     }
-    // Verifica se token ainda é válido
-    let tokenValido = false;
-    try {
-      const testR = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token='+adminToken);
-      const testData = await testR.json();
-      tokenValido = testR.ok && !testData.error;
-    } catch(e) { tokenValido = false; }
 
-    if(!tokenValido){
-      // Token expirado — tenta renovar silenciosamente
-      showLoading('Renovando sessão do admin…');
-      adminToken = await renovarTokenSilencioso();
-      if(!adminToken){
-        hideLoading();
-        showError('⚠ Sessão do admin expirou (tokens duram 1h). O admin precisa logar com Google novamente na aba "🔵 Google" para renovar o acesso.');
-        return;
-      }
-      localStorage.setItem(ADMIN_TOKEN_KEY, adminToken);
-    }
-    // Busca usuarios.json no Drive do admin
-    const usuarios = await readUsuarios(adminToken);
-    if(!usuarios){hideLoading();showError('⚠ Nenhum usuário cadastrado ainda. Fale com o admin.');return;}
     const hash = await sha256(senha);
     const user = usuarios.find(u=>u.email===email && u.senha===hash && u.ativo!==false);
-    if(!user){hideLoading();showError('Email ou senha incorretos.');return;}
+    if(!user){
+      hideLoading();
+      showError('Email ou senha incorretos.');
+      return;
+    }
+
+    // Login OK — usa token do admin para acessar o Drive (dados compartilhados)
+    const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY)||'';
     sessionStorage.setItem('gapi_token', adminToken);
-    sessionStorage.setItem('gapi_user', JSON.stringify({name:user.nome||user.email,email:user.email,picture:'',role:user.role||'user'}));
+    sessionStorage.setItem('gapi_user', JSON.stringify({
+      name: user.nome||user.email,
+      email: user.email,
+      picture: '',
+      role: user.role||'user'
+    }));
     window.location.href='app.html';
   }catch(e){
     hideLoading();showError('Erro ao verificar login: '+e.message);
   }
-}
-
-function renovarTokenSilencioso(){
-  return new Promise((resolve)=>{
-    try{
-      const tc = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID, scope: SCOPES,
-        prompt: '',
-        callback:(resp)=>resolve(resp.error ? null : resp.access_token),
-      });
-      tc.requestAccessToken({prompt:''});
-    }catch(e){resolve(null);}
-  });
-}
-
-async function readUsuarios(token){
-  try{
-    const r = await fetch(
-      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${USERS_FILE}'&fields=files(id)`,
-      {headers:{'Authorization':'Bearer '+token}}
-    );
-    if(!r.ok) return null;
-    const d = await r.json();
-    if(!d.files||!d.files[0]) return null;
-    const r2 = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${d.files[0].id}?alt=media`,
-      {headers:{'Authorization':'Bearer '+token}}
-    );
-    if(!r2.ok) return null;
-    return await r2.json();
-  }catch(e){return null;}
 }
 
 // ─── Login Google (admin) ───
@@ -275,8 +267,33 @@ function signInWithGoogle(){showLoading('Aguardando autorização Google…');to
 async function handleToken(resp){
   if(resp.error){hideLoading();showError('Erro Google: '+resp.error);return;}
   const token = resp.access_token;
-  // Salva token do admin de forma persistente (para usuarios de senha usarem)
+  // Salva token do admin de forma persistente
   localStorage.setItem(ADMIN_TOKEN_KEY, token);
+  showLoading('Sincronizando usuários…');
+
+  // Sincroniza cache de usuários do Drive para localStorage
+  // Isso garante que login por senha funciona mesmo depois do token expirar
+  try{
+    const r = await fetch(
+      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='usuarios.json'&fields=files(id)`,
+      {headers:{'Authorization':'Bearer '+token}}
+    );
+    if(r.ok){
+      const d = await r.json();
+      if(d.files&&d.files[0]){
+        const r2 = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${d.files[0].id}?alt=media`,
+          {headers:{'Authorization':'Bearer '+token}}
+        );
+        if(r2.ok){
+          const usuarios = await r2.json();
+          localStorage.setItem('siq_usuarios_cache', JSON.stringify(usuarios));
+          localStorage.setItem('siq_usuarios_updated', new Date().toISOString());
+        }
+      }
+    }
+  }catch(e){ console.warn('Could not sync users cache:', e); }
+
   try{
     const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{'Authorization':'Bearer '+token}});
     const u = await r.json();
