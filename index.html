@@ -91,14 +91,11 @@ body{background:#080d14;color:#e8f0fe;font-family:'DM Sans',sans-serif;display:f
     <!-- LOGIN GOOGLE -->
     <div id="panel-google" style="display:none">
       <button class="btn-google" onclick="signInWithGoogle()">
-        <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
         Entrar com Google
       </button>
-      <div id="adminStatus" style="margin-top:12px;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-size:11px;color:#6b82a6;font-family:'JetBrains Mono',monospace;line-height:1.7">
-        Verificando status do admin…
-      </div>
-      <div style="margin-top:10px;padding:12px 14px;background:rgba(79,140,255,0.07);border:1px solid rgba(79,140,255,0.15);border-radius:10px;font-size:11.5px;color:#6b82a6;line-height:1.6">
-        ℹ️ Login Google é para o <strong style="color:#4f8cff">administrador</strong>. Os dados ficam no seu Drive e são compartilhados. O token dura <strong style="color:#ffd34e">~1 hora</strong> — para liberar login por senha, o admin deve renovar aqui periodicamente.
+      <div style="margin-top:16px;padding:12px 14px;background:rgba(79,140,255,0.07);border:1px solid rgba(79,140,255,0.15);border-radius:10px;font-size:11.5px;color:#6b82a6;line-height:1.6">
+        ℹ️ Login Google é para o <strong style="color:#4f8cff">administrador</strong>. Seus dados ficam salvos no seu Drive e são compartilhados com todos os usuários.
       </div>
     </div>
 
@@ -115,232 +112,138 @@ body{background:#080d14;color:#e8f0fe;font-family:'DM Sans',sans-serif;display:f
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-const CLIENT_ID    = '490149817387-if7aeuv73795obnuqand42nkt0g8u15f.apps.googleusercontent.com';
-const SCOPES       = 'https://www.googleapis.com/auth/drive.appdata';
-const ADMIN_KEY    = 'siq_admin_token';
-const ADMIN_USER   = 'siq_admin_user';
-const USERS_CACHE  = 'siq_usuarios_cache';
-
-// ── UI helpers ──────────────────────────────────────────────────────────────
-function showLoading(msg){
-  document.getElementById('mainArea').style.display='none';
-  document.getElementById('loadingArea').style.display='flex';
-  document.getElementById('loadingText').textContent = msg||'Carregando…';
-}
-function hideLoading(){
-  document.getElementById('mainArea').style.display='';
-  document.getElementById('loadingArea').style.display='none';
-}
-function showError(msg){
-  const el = document.getElementById('errorMsg');
-  el.style.display = '';
-  el.textContent   = msg;
-}
-function hideError(){ document.getElementById('errorMsg').style.display='none'; }
-
-function switchTab(t){
-  document.getElementById('tab-senha').className  = 'tab'+(t==='senha'?' active':'');
-  document.getElementById('tab-google').className = 'tab'+(t==='google'?' active':'');
-  document.getElementById('panel-senha').style.display  = t==='senha' ?'':'none';
-  document.getElementById('panel-google').style.display = t==='google'?'':'none';
-  if(t==='google') checkAdminStatus();
-  hideError();
-}
-
-// ── SHA-256 ──────────────────────────────────────────────────────────────────
+const CLIENT_ID = '490149817387-if7aeuv73795obnuqand42nkt0g8u15f.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
+// ─── HASH simples (SHA-256 via SubtleCrypto) ───
 async function sha256(str){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
+// ─── Drive helpers sem token próprio ───
+// Para login por senha, lemos usuarios.json do Drive do admin
+// O token do admin fica em localStorage (persistente) quando ele loga via Google
+const ADMIN_TOKEN_KEY = 'siq_admin_token';
+const ADMIN_USER_KEY  = 'siq_admin_user';
+const USERS_FILE      = 'usuarios.json';
 
-// ── Login por senha ──────────────────────────────────────────────────────────
+function switchTab(t){
+  document.getElementById('tab-senha').className='tab'+(t==='senha'?' active':'');
+  document.getElementById('tab-google').className='tab'+(t==='google'?' active':'');
+  document.getElementById('panel-senha').style.display=t==='senha'?'':'none';
+  document.getElementById('panel-google').style.display=t==='google'?'':'none';
+  hideError();
+}
+
+function showLoading(msg){
+  document.getElementById('mainArea').style.display='none';
+  const la=document.getElementById('loadingArea');la.style.display='flex';
+  document.getElementById('loadingText').textContent=msg||'Carregando…';
+}
+function hideLoading(){document.getElementById('mainArea').style.display='';document.getElementById('loadingArea').style.display='none';}
+function showError(msg){const el=document.getElementById('errorMsg');el.style.display='';el.textContent=msg;}
+function hideError(){document.getElementById('errorMsg').style.display='none';}
+
+// ─── Login por senha ───
 async function loginSenha(){
   const email = document.getElementById('inputEmail').value.trim().toLowerCase();
   const senha = document.getElementById('inputSenha').value;
-
-  if(!email || !senha){ showError('Preencha email e senha.'); return; }
-  hideError();
-
-  // Desabilita botão para evitar cliques duplos
-  const btn = document.getElementById('btnLoginSenha');
-  btn.disabled = true;
-  btn.textContent = '⏳ Verificando…';
-
-  try {
-    // 1. Lê cache local
-    let usuarios = [];
-    const raw = localStorage.getItem(USERS_CACHE);
-    if(raw){ try{ usuarios = JSON.parse(raw); }catch(e){} }
-
-    // 2. Se cache vazio, busca no Drive
-    if(!usuarios.length){
-      const tk = localStorage.getItem(ADMIN_KEY);
-      if(tk){
-        btn.textContent = '⏳ Buscando usuários…';
-        try{
-          const r  = await fetch(
-            "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='usuarios.json'&fields=files(id)",
-            {headers:{'Authorization':'Bearer '+tk}}
-          );
-          if(r.ok){
-            const d = await r.json();
-            if(d.files && d.files[0]){
-              const r2 = await fetch(
-                "https://www.googleapis.com/drive/v3/files/"+d.files[0].id+"?alt=media",
-                {headers:{'Authorization':'Bearer '+tk}}
-              );
-              if(r2.ok){
-                usuarios = await r2.json();
-                localStorage.setItem(USERS_CACHE, JSON.stringify(usuarios));
-              }
-            }
-          }
-        }catch(e){}
-      }
-    }
-
-    if(!usuarios.length){
-      showError('Nenhum usuário cadastrado. Admin deve criar usuários na aba 👥 Usuários.');
-      return;
-    }
-
-    // 3. Verifica credenciais
-    const hash   = await sha256(senha);
-    const found  = usuarios.find(u => u.email === email);
-
-    if(!found){
-      showError('Email não cadastrado: ' + email);
-      return;
-    }
-    if(found.ativo === false){
-      showError('Conta desativada. Fale com o admin.');
-      return;
-    }
-    if(found.senha !== hash){
-      showError('Senha incorreta.');
-      return;
-    }
-
-    // 4. Login OK — grava sessão e redireciona
-    sessionStorage.setItem('gapi_token', 'password_auth');
-    sessionStorage.setItem('gapi_user', JSON.stringify({
-      name   : found.nome  || found.email,
-      email  : found.email,
-      picture: '',
-      role   : found.role  || 'user'
-    }));
-
-    btn.textContent = '✅ Entrando…';
-    window.location.href = 'app.html';
-
-  } catch(err){
-    showError('Erro inesperado: ' + err.message);
-    console.error(err);
-  } finally {
-    btn.disabled    = false;
-    if(btn.textContent === '⏳ Verificando…') btn.textContent = 'Entrar';
-  }
-}
-
-// ── Google (admin) ───────────────────────────────────────────────────────────
-let tokenClient;
-
-window.onload = function(){
-  // Limpa qualquer sessão de senha antiga (não faz auto-redirect para password_auth)
-  const tok  = sessionStorage.getItem('gapi_token');
-  const usr  = sessionStorage.getItem('gapi_user');
-  if(tok && tok !== 'password_auth' && usr){
-    // Sessão Google ativa → redireciona direto
-    showLoading('Retomando sessão…');
-    window.location.href = 'app.html';
-    return;
-  }
-  // Garante que sessões de senha antigas não causam loop
-  sessionStorage.removeItem('gapi_token');
-  sessionStorage.removeItem('gapi_user');
-
+  if(!email||!senha){showError('Preencha email e senha.');return;}
+  showLoading('Verificando credenciais…');
   try{
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID, scope: SCOPES, callback: handleToken
-    });
-  }catch(e){}
-
-  checkAdminStatus();
-};
-
-function checkAdminStatus(){
-  const el = document.getElementById('adminStatus');
-  if(!el) return;
-  const tk  = localStorage.getItem(ADMIN_KEY);
-  const usr = localStorage.getItem(ADMIN_USER);
-  if(!tk){
-    el.innerHTML    = '❌ <strong style="color:#ff3b5c">Admin não configurado.</strong> Clique em "Entrar com Google" primeiro.';
-    el.style.borderColor = 'rgba(255,59,92,0.3)';
-    el.style.background  = 'rgba(255,59,92,0.07)';
-    return;
-  }
-  fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token='+tk)
-    .then(r=>r.json())
-    .then(d=>{
-      const u = usr ? JSON.parse(usr) : {};
-      if(d.error){
-        el.innerHTML = '⚠️ <strong style="color:#ffd34e">Token expirado.</strong> Clique em "Entrar com Google" para renovar.';
-        el.style.borderColor = 'rgba(255,211,78,0.3)';
-        el.style.background  = 'rgba(255,211,78,0.07)';
-      } else {
-        const mins = Math.round(parseInt(d.expires_in)/60);
-        el.innerHTML = '✅ <strong style="color:#00e5a0">Admin:</strong> '+(u.email||'configurado')+' — expira em <strong style="color:#ffd34e">'+mins+' min</strong>';
-        el.style.borderColor = 'rgba(0,229,160,0.2)';
-        el.style.background  = 'rgba(0,229,160,0.05)';
+    // Tenta renovar token do admin silenciosamente primeiro
+    let adminToken = localStorage.getItem(ADMIN_TOKEN_KEY);
+    if(!adminToken){
+      hideLoading();
+      showError('⚠ Admin ainda não configurou o sistema. Peça ao admin para logar com Google primeiro.');
+      return;
+    }
+    // Verifica se token ainda é válido
+    const testR = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token='+adminToken);
+    if(!testR.ok || (await testR.json()).error){
+      // Token expirado — tenta renovar silenciosamente
+      adminToken = await renovarTokenSilencioso();
+      if(!adminToken){
+        hideLoading();
+        showError('⚠ Sessão expirada. Peça ao admin para logar com Google novamente para renovar o acesso.');
+        return;
       }
-    }).catch(()=>{ el.innerHTML='⚠️ Não foi possível verificar.'; });
+      localStorage.setItem(ADMIN_TOKEN_KEY, adminToken);
+    }
+    // Busca usuarios.json no Drive do admin
+    const usuarios = await readUsuarios(adminToken);
+    if(!usuarios){hideLoading();showError('⚠ Nenhum usuário cadastrado ainda. Fale com o admin.');return;}
+    const hash = await sha256(senha);
+    const user = usuarios.find(u=>u.email===email && u.senha===hash && u.ativo!==false);
+    if(!user){hideLoading();showError('Email ou senha incorretos.');return;}
+    sessionStorage.setItem('gapi_token', adminToken);
+    sessionStorage.setItem('gapi_user', JSON.stringify({name:user.nome||user.email,email:user.email,picture:'',role:user.role||'user'}));
+    window.location.href='app.html';
+  }catch(e){
+    hideLoading();showError('Erro ao verificar login: '+e.message);
+  }
 }
 
-function signInWithGoogle(){
-  showLoading('Aguardando autorização Google…');
-  tokenClient.requestAccessToken({prompt:'consent'});
+function renovarTokenSilencioso(){
+  return new Promise((resolve)=>{
+    try{
+      const tc = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID, scope: SCOPES,
+        prompt: '',
+        callback:(resp)=>resolve(resp.error ? null : resp.access_token),
+      });
+      tc.requestAccessToken({prompt:''});
+    }catch(e){resolve(null);}
+  });
 }
 
-async function handleToken(resp){
-  if(resp.error){ hideLoading(); showError('Erro Google: '+resp.error); return; }
-  const token = resp.access_token;
-  localStorage.setItem(ADMIN_KEY, token);
-  showLoading('Sincronizando usuários…');
-
-  // Sincroniza cache de usuários do Drive → localStorage
+async function readUsuarios(token){
   try{
     const r = await fetch(
-      "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='usuarios.json'&fields=files(id)",
+      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${USERS_FILE}'&fields=files(id)`,
       {headers:{'Authorization':'Bearer '+token}}
     );
-    if(r.ok){
-      const d = await r.json();
-      if(d.files && d.files[0]){
-        const r2 = await fetch(
-          "https://www.googleapis.com/drive/v3/files/"+d.files[0].id+"?alt=media",
-          {headers:{'Authorization':'Bearer '+token}}
-        );
-        if(r2.ok){
-          const lista = await r2.json();
-          localStorage.setItem(USERS_CACHE, JSON.stringify(lista));
-          localStorage.setItem('siq_usuarios_updated', new Date().toISOString());
-        }
-      }
-    }
-  }catch(e){}
+    if(!r.ok) return null;
+    const d = await r.json();
+    if(!d.files||!d.files[0]) return null;
+    const r2 = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${d.files[0].id}?alt=media`,
+      {headers:{'Authorization':'Bearer '+token}}
+    );
+    if(!r2.ok) return null;
+    return await r2.json();
+  }catch(e){return null;}
+}
 
+// ─── Login Google (admin) ───
+let tokenClient;
+window.onload = function(){
+  // Se já tem sessão, vai direto
+  if(sessionStorage.getItem('gapi_token')&&sessionStorage.getItem('gapi_user')){
+    showLoading('Retomando sessão…');window.location.href='app.html';return;
+  }
+  try{
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID, scope: SCOPES, callback: handleToken,
+    });
+  }catch(e){}
+};
+function signInWithGoogle(){showLoading('Aguardando autorização Google…');tokenClient.requestAccessToken({prompt:'consent'});}
+async function handleToken(resp){
+  if(resp.error){hideLoading();showError('Erro Google: '+resp.error);return;}
+  const token = resp.access_token;
+  // Salva token do admin de forma persistente (para usuarios de senha usarem)
+  localStorage.setItem(ADMIN_TOKEN_KEY, token);
   try{
     const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{'Authorization':'Bearer '+token}});
     const u = await r.json();
-    localStorage.setItem(ADMIN_USER, JSON.stringify({name:u.name,email:u.email,picture:u.picture}));
+    localStorage.setItem(ADMIN_USER_KEY, JSON.stringify({name:u.name,email:u.email,picture:u.picture}));
     sessionStorage.setItem('gapi_token', token);
     sessionStorage.setItem('gapi_user', JSON.stringify({name:u.name,email:u.email,picture:u.picture,role:'admin'}));
   }catch(e){
-    sessionStorage.setItem('gapi_token', token);
-    sessionStorage.setItem('gapi_user', JSON.stringify({name:'Admin',email:'',picture:'',role:'admin'}));
+    sessionStorage.setItem('gapi_token',token);
+    sessionStorage.setItem('gapi_user',JSON.stringify({name:'Admin',email:'',picture:'',role:'admin'}));
   }
-  showLoading('Entrando…');
-  setTimeout(()=>{ window.location.href='app.html'; }, 500);
+  showLoading('Entrando…');setTimeout(()=>{window.location.href='app.html';},500);
 }
 </script>
 </body>

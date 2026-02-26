@@ -367,18 +367,12 @@ td{padding:7px 11px;border-right:1px solid var(--border);vertical-align:middle}t
 </div>
 <div class="view" id="view-usuarios">
   <div style="flex:1;overflow-y:auto;padding:28px 32px;max-width:700px;margin:0 auto;width:100%">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
       <div>
         <div style="font-size:20px;font-weight:800;letter-spacing:-.3px">👥 Gerenciar Usuários</div>
         <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-top:3px">Usuários com acesso ao sistema via email/senha</div>
       </div>
       <button class="btn btn-primary" onclick="abrirModalNovoUsuario()">＋ Novo Usuário</button>
-    </div>
-    <div id="driveStatusBar" style="margin-bottom:10px;padding:10px 14px;border-radius:8px;font-family:var(--mono);font-size:11px;background:var(--panel);border:1px solid var(--border);color:var(--text3)">
-      🔄 Verificando conexão com Drive…
-    </div>
-    <div id="driveDebugBar" style="margin-bottom:16px;padding:10px 14px;border-radius:8px;font-family:var(--mono);font-size:10px;background:rgba(79,140,255,0.05);border:1px solid rgba(79,140,255,0.15);color:var(--text3);line-height:1.8">
-      🔍 Diagnóstico: carregando…
     </div>
     <div id="usuariosList" style="display:flex;flex-direction:column;gap:10px">
       <div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum usuário</div><div class="empty-sub">Crie o primeiro usuário para liberar o acesso por email e senha.</div></div>
@@ -414,11 +408,10 @@ td{padding:7px 11px;border-right:1px solid var(--border);vertical-align:middle}t
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 // ═══ CONFIG ═══
-// ── CONFIGURAÇÃO DO BACKEND (Apps Script) ──────────────────────
-// Após fazer o deploy do Apps Script, cole a URL aqui:
-const API_URL    = localStorage.getItem('siq_api_url') || '';
-const API_KEY    = 'supplyiq2026'; // Deve ser igual ao SECRET_KEY no Apps Script
-// ───────────────────────────────────────────────────────────────
+const CLIENT_ID = '490149817387-if7aeuv73795obnuqand42nkt0g8u15f.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
+const FOLDER_NAME = 'Supply IQ — Rede de Compras';
+const FILES = { fornecedores:'fornecedores.json', requisicoes:'requisicoes.json', nfe:'nfe.json' };
 
 // ═══ CONSTANTES APP ═══
 const CONTAS=['01. Banco do Brasil','02. Itaú Unibanco','03. XP Investimentos','04. Mercado Pago Matriz','05. Amazon Matriz','06. Magalu Matriz','07. Shopee Matriz','08. Tik Tok','09. Visa - Banco do Brasil','10. Visa - Itaú','11. Caixinha','12. Arquivo de NFs em Duplicidade','13. XP Investimentos Aplicações','14. Itaú Unibanco Conta Garantida','15. Importação','16. Elo - Banco do Brasil','Ame','B2W Matriz','Omie.CASH','Omie.CASH (Boletos) (Inativo)','PagBank (PagSeguro)','x2 (Inativo) Via Varejo Matriz'];
@@ -431,166 +424,185 @@ const S={
   sortCol:'statusKey',sortDir:1,statusFilter:'all',marcaFilter:'',selected:new Set(),
   fornecedores:[],requisicoes:[],activeReq:null,activeFornec:null,
   nfeHistory:[],activeNfe:null,pendingDownloadId:null,
-  syncTimer:null
+  driveToken:null,driveFolderId:null,fileIds:{},syncQueue:{},syncTimer:null
 };
 
-// ═══ APPS SCRIPT API ═══
-async function api(action, data){
-  const url = localStorage.getItem('siq_api_url');
-  if(!url) throw new Error('URL da API não configurada');
-  const body = JSON.stringify({ action, key: API_KEY, ...data });
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' }, // text/plain evita preflight CORS no Apps Script
-    body
-  });
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  const json = await r.json();
-  if(!json.ok) throw new Error(json.error || 'Erro na API');
-  return json;
+// ═══ GOOGLE DRIVE API ═══
+function driveHeaders(){
+  return {'Authorization':'Bearer '+S.driveToken,'Content-Type':'application/json'};
 }
 
 async function driveInit(){
-  const rawToken = sessionStorage.getItem('gapi_token');
-  if(!rawToken){ window.location.href='index.html'; return; }
+  S.driveToken = sessionStorage.getItem('gapi_token');
+  if(!S.driveToken){ window.location.href='index.html'; return; }
 
-  // Mostra info do usuário
+  // Show user info
   try{
     const u = JSON.parse(sessionStorage.getItem('gapi_user')||'{}');
     document.getElementById('userName').textContent = u.name||u.email||'Usuário';
     const av = document.getElementById('userAvatar');
     if(u.picture){ av.innerHTML=`<img src="${u.picture}" alt="">`; }
     else{ av.textContent=(u.name||'U')[0].toUpperCase(); }
+    // Mostra aba de usuários só para admin (logado via Google)
     if(u.role==='admin'){
       document.getElementById('tab-usuarios').style.display='';
       document.getElementById('sb-usuarios').style.display='';
+      localStorage.setItem('siq_admin_token', S.driveToken);
     }
   }catch(e){}
 
-  // Verifica se a URL da API está configurada
-  const apiUrl = localStorage.getItem('siq_api_url');
-  if(!apiUrl){
-    // Sem API configurada — mostra modal de configuração
+  // Find or create appDataFolder file structure
+  setSyncDot('syncing');
+  try {
+    await ensureDriveFiles();
+    await loadFromDrive();
+    setSyncDot('ok');
+    renderFornecList(); renderNfeHist();
+    document.getElementById('sb-forn-badge').textContent=S.fornecedores.length;
+    if(S.requisicoes.length>0){
+      document.getElementById('sb-req-badge').style.display='';
+      document.getElementById('sb-req-badge').textContent=S.requisicoes.length;
+    }
+    toast('✅ Dados carregados do Google Drive','success');
+  } catch(e) {
+    console.error('Drive init error:',e);
+    // Token may be expired — redirect to login
+    if(e.status===401){
+      sessionStorage.clear();
+      window.location.href='index.html';
+      return;
+    }
+    setSyncDot('error');
+    toast('⚠ Erro ao conectar com Drive. Usando dados locais.','warning');
     loadLocal();
     renderFornecList(); renderNfeHist();
-    atualizarBadges();
-    setSyncDot('error');
-    showApiConfig();
-    return;
-  }
-
-  // Carrega dados locais imediatamente (para UI responsiva)
-  loadLocal();
-  renderFornecList(); renderNfeHist();
-  atualizarBadges();
-
-  // Sincroniza com API em background
-  syncComApi();
-}
-
-function atualizarBadges(){
-  document.getElementById('sb-forn-badge').textContent = S.fornecedores.length;
-  if(S.requisicoes.length>0){
-    document.getElementById('sb-req-badge').style.display='';
-    document.getElementById('sb-req-badge').textContent = S.requisicoes.length;
   }
 }
 
-async function syncComApi(){
-  setSyncDot('syncing');
+async function ensureDriveFiles(){
+  // Use appDataFolder (hidden, app-specific) - no folder needed
+  for(const [key, filename] of Object.entries(FILES)){
+    const existing = await driveSearchFile(filename);
+    if(existing){
+      S.fileIds[key] = existing;
+    } else {
+      // Will be created on first save
+    }
+  }
+}
+
+async function driveSearchFile(name){
+  const r = await fetch(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${name}'&fields=files(id,name)`,
+    { headers: driveHeaders() }
+  );
+  if(!r.ok) throw {status:r.status};
+  const d = await r.json();
+  return d.files && d.files[0] ? d.files[0].id : null;
+}
+
+async function driveReadFile(fileId){
+  const r = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+    { headers: {'Authorization':'Bearer '+S.driveToken} }
+  );
+  if(!r.ok) return null;
+  return await r.json();
+}
+
+async function driveWriteFile(key, data){
+  const filename = FILES[key];
+  const content = JSON.stringify(data);
+  const blob = new Blob([content],{type:'application/json'});
+
+  if(S.fileIds[key]){
+    // Update existing
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify({name:filename})],{type:'application/json'}));
+    form.append('file', blob);
+    const r = await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${S.fileIds[key]}?uploadType=multipart`,
+      { method:'PATCH', headers:{'Authorization':'Bearer '+S.driveToken}, body:form }
+    );
+    if(!r.ok) throw {status:r.status};
+  } else {
+    // Create new in appDataFolder
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify({name:filename, parents:['appDataFolder']})],{type:'application/json'}));
+    form.append('file', blob);
+    const r = await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+      { method:'POST', headers:{'Authorization':'Bearer '+S.driveToken}, body:form }
+    );
+    if(!r.ok) throw {status:r.status};
+    const d = await r.json();
+    S.fileIds[key] = d.id;
+  }
+}
+
+async function loadFromDrive(){
+  const keys = Object.keys(FILES);
+  for(const key of keys){
+    const fileId = await driveSearchFile(FILES[key]);
+    if(fileId){
+      S.fileIds[key] = fileId;
+      const data = await driveReadFile(fileId);
+      if(data && Array.isArray(data)){
+        if(key==='fornecedores') S.fornecedores = data;
+        if(key==='requisicoes') S.requisicoes = data;
+        if(key==='nfe') S.nfeHistory = data;
+      }
+    }
+  }
+  // Also save to localStorage as cache
+  saveLocal();
+}
+
+function saveLocal(){
   try{
-    const res = await api('getAllData');
-    S.fornecedores = res.fornecedores || S.fornecedores;
-    S.requisicoes  = res.requisicoes  || S.requisicoes;
-    S.nfeHistory   = res.nfe          || S.nfeHistory;
-    saveLocal();
-    renderFornecList(); renderNfeHist();
-    atualizarBadges();
-    setSyncDot('ok');
-  }catch(e){
-    console.warn('API sync failed, using local data:', e.message);
-    setSyncDot('error');
-  }
+    localStorage.setItem('siq_fornec',JSON.stringify(S.fornecedores));
+    localStorage.setItem('siq_req',JSON.stringify(S.requisicoes));
+    localStorage.setItem('siq_nfe',JSON.stringify(S.nfeHistory));
+  }catch(e){}
+}
+function loadLocal(){
+  try{
+    S.fornecedores=JSON.parse(localStorage.getItem('siq_fornec')||'[]');
+    S.requisicoes=JSON.parse(localStorage.getItem('siq_req')||'[]');
+    S.nfeHistory=JSON.parse(localStorage.getItem('siq_nfe')||'[]');
+  }catch(e){}
 }
 
-function showApiConfig(){
-  // Cria modal de configuração da URL da API se não existir
-  if(document.getElementById('modalApiConfig')) return;
-  const m = document.createElement('div');
-  m.id = 'modalApiConfig';
-  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px';
-  m.innerHTML = `
-    <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:520px;width:100%">
-      <h2 style="color:var(--text1);margin:0 0 8px;font-size:18px">⚙️ Configurar Backend</h2>
-      <p style="color:var(--text3);font-size:13px;margin:0 0 20px">Cole a URL do seu Google Apps Script para sincronizar dados entre todos os usuários.</p>
-      <label style="color:var(--text2);font-size:12px;font-family:var(--mono)">URL DO APPS SCRIPT</label>
-      <input id="inputApiUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec"
-        style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text1);padding:10px 12px;font-size:13px;margin:6px 0 16px;font-family:var(--mono)"
-        value="${localStorage.getItem('siq_api_url')||''}">
-      <div style="display:flex;gap:10px">
-        <button onclick="salvarApiUrl()" style="flex:1;background:var(--accent);color:#000;border:none;border-radius:8px;padding:11px;font-weight:700;cursor:pointer;font-size:14px">Salvar e Conectar</button>
-        <button onclick="document.getElementById('modalApiConfig').remove()" style="background:var(--panel);color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:11px 16px;cursor:pointer;font-size:14px">Fechar</button>
-      </div>
-      <p style="color:var(--text3);font-size:11px;margin:14px 0 0;font-family:var(--mono)">
-        📋 Não tem a URL? Veja o README_SETUP.txt para instruções de configuração.
-      </p>
-    </div>`;
-  document.body.appendChild(m);
+// Debounced save — batches rapid changes into one Drive write
+function save(key){
+  saveLocal();
+  if(!S.driveToken) return;
+  if(S.syncTimer) clearTimeout(S.syncTimer);
+  if(key) S.syncQueue[key]=true; else {S.syncQueue.fornecedores=true;S.syncQueue.requisicoes=true;S.syncQueue.nfe=true;}
+  setSyncDot('syncing');
+  S.syncTimer = setTimeout(async ()=>{
+    try{
+      const keys = Object.keys(S.syncQueue);
+      S.syncQueue={};
+      for(const k of keys){
+        const data = k==='fornecedores'?S.fornecedores:k==='requisicoes'?S.requisicoes:S.nfeHistory;
+        await driveWriteFile(k, data);
+      }
+      setSyncDot('ok');
+    }catch(e){
+      console.error('Sync error:',e);
+      if(e.status===401){ sessionStorage.clear(); window.location.href='index.html'; return; }
+      setSyncDot('error');
+      toast('⚠ Erro ao salvar no Drive','warning');
+    }
+  }, 1200);
 }
-
-async function salvarApiUrl(){
-  const url = document.getElementById('inputApiUrl').value.trim();
-  if(!url){ toast('Cole a URL do Apps Script','error'); return; }
-  localStorage.setItem('siq_api_url', url);
-  document.getElementById('modalApiConfig').remove();
-  toast('URL salva! Conectando…','success');
-  syncComApi();
-}
-
 
 function setSyncDot(state){
   const d=document.getElementById('syncDot');
   d.className='sync-dot'+(state==='syncing'?' syncing':state==='error'?' error':'');
   d.title=state==='syncing'?'Salvando no Drive…':state==='error'?'Erro ao salvar':'Salvo no Drive ✓';
 }
-// ═══ DADOS — SAVE / LOAD ═══
-function saveLocal(){
-  try{
-    localStorage.setItem('siq_fornec', JSON.stringify(S.fornecedores));
-    localStorage.setItem('siq_req',    JSON.stringify(S.requisicoes));
-    localStorage.setItem('siq_nfe',    JSON.stringify(S.nfeHistory));
-  }catch(e){}
-}
-
-function loadLocal(){
-  try{
-    S.fornecedores = JSON.parse(localStorage.getItem('siq_fornec')||'[]');
-    S.requisicoes  = JSON.parse(localStorage.getItem('siq_req')   ||'[]');
-    S.nfeHistory   = JSON.parse(localStorage.getItem('siq_nfe')   ||'[]');
-  }catch(e){}
-}
-
-// Debounced save — salva localmente imediatamente, envia para API após 1.2s
-function save(key){
-  saveLocal(); // local imediato
-  if(S.syncTimer) clearTimeout(S.syncTimer);
-  setSyncDot('syncing');
-  S.syncTimer = setTimeout(async ()=>{
-    try{
-      const apiUrl = localStorage.getItem('siq_api_url');
-      if(!apiUrl){ setSyncDot('error'); return; }
-      if(!key || key==='fornecedores') await api('saveFornecedores', {data: S.fornecedores});
-      if(!key || key==='requisicoes')  await api('saveRequisicoes',  {data: S.requisicoes});
-      if(!key || key==='nfe')          await api('saveNfe',          {data: S.nfeHistory});
-      setSyncDot('ok');
-    }catch(e){
-      console.error('Save error:', e.message);
-      setSyncDot('error');
-      toast('⚠ Dado salvo localmente (API offline)','warning');
-    }
-  }, 1200);
-}
-
 
 // ═══ TEMA ═══
 function toggleTheme(){
@@ -988,115 +1000,70 @@ function nfeAtualizarCustos(chave){
 function nfeDelete(chave){if(!confirm('Remover?'))return;S.nfeHistory=S.nfeHistory.filter(n=>n.chave!==chave);S.activeNfe=null;save('nfe');renderNfeHist();document.getElementById('nfeRight').innerHTML='<div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">NF removida</div></div>'}
 
 // ═══ USUÁRIOS (admin only) ═══
+const USERS_FILE = 'usuarios.json';
+let usuariosFileId = null;
+
 async function sha256(str){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
 async function loadUsuarios(){
-  // Tenta API primeiro
   try{
-    const res = await api('getUsuarios');
-    const lista = res.data || [];
-    localStorage.setItem('siq_usuarios_cache', JSON.stringify(lista));
-    localStorage.setItem('siq_usuarios_updated', new Date().toISOString());
-    return lista;
-  }catch(e){
-    console.warn('API load failed, using localStorage cache');
-  }
-  // Fallback: cache local
-  try{
-    const cache = localStorage.getItem('siq_usuarios_cache');
-    if(cache) return JSON.parse(cache);
-  }catch(e){}
-  return [];
+    const r = await fetch(
+      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${USERS_FILE}'&fields=files(id)`,
+      {headers:{'Authorization':'Bearer '+S.driveToken}}
+    );
+    if(!r.ok) return [];
+    const d = await r.json();
+    if(!d.files||!d.files[0]) return [];
+    usuariosFileId = d.files[0].id;
+    const r2 = await fetch(`https://www.googleapis.com/drive/v3/files/${usuariosFileId}?alt=media`,{headers:{'Authorization':'Bearer '+S.driveToken}});
+    if(!r2.ok) return [];
+    return await r2.json();
+  }catch(e){return [];}
 }
 
 async function saveUsuarios(lista){
-  // Salva cache local imediatamente
-  localStorage.setItem('siq_usuarios_cache', JSON.stringify(lista));
-  localStorage.setItem('siq_usuarios_updated', new Date().toISOString());
-  // Salva na API
-  try{
-    await api('saveUsuarios', {data: lista});
-    console.log('Usuários salvos na API:', lista.length);
-  }catch(e){
-    console.warn('API save failed for usuarios (saved locally):', e.message);
+  const content = JSON.stringify(lista);
+  const blob = new Blob([content],{type:'application/json'});
+  const form = new FormData();
+  if(usuariosFileId){
+    form.append('metadata',new Blob([JSON.stringify({name:USERS_FILE})],{type:'application/json'}));
+    form.append('file',blob);
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${usuariosFileId}?uploadType=multipart`,
+      {method:'PATCH',headers:{'Authorization':'Bearer '+S.driveToken},body:form});
+  }else{
+    form.append('metadata',new Blob([JSON.stringify({name:USERS_FILE,parents:['appDataFolder']})],{type:'application/json'}));
+    form.append('file',blob);
+    const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+      {method:'POST',headers:{'Authorization':'Bearer '+S.driveToken},body:form});
+    const d = await r.json();
+    usuariosFileId = d.id;
   }
+  // Atualiza token admin no localStorage para login por senha funcionar
+  localStorage.setItem('siq_admin_token', S.driveToken);
 }
 
 async function renderUsuarios(){
-  // Atualiza status da API
-  const statusBar = document.getElementById('driveStatusBar');
-  const debugBar  = document.getElementById('driveDebugBar');
-  const apiUrl    = localStorage.getItem('siq_api_url');
-
-  if(statusBar){
-    if(!apiUrl){
-      statusBar.innerHTML = '⚠️ <strong style="color:var(--yellow)">API não configurada.</strong> <button onclick="showApiConfig()" style="background:var(--yellow);color:#000;border:none;border-radius:5px;padding:2px 9px;font-size:10px;font-weight:700;cursor:pointer;margin-left:8px">⚙️ Configurar</button>';
-      statusBar.style.borderColor='rgba(255,211,78,0.3)';statusBar.style.background='rgba(255,211,78,0.07)';
-    } else {
-      const updated = localStorage.getItem('siq_usuarios_updated');
-      const updStr  = updated ? ' · Sync: '+new Date(updated).toLocaleString('pt-BR') : '';
-      statusBar.innerHTML = '✅ <strong style="color:var(--accent)">API conectada.</strong> Usuários criados aqui podem logar imediatamente'+updStr+'.';
-      statusBar.style.borderColor='rgba(0,229,160,0.2)';statusBar.style.background='rgba(0,229,160,0.05)';statusBar.style.color='var(--text2)';
-    }
-  }
-  if(debugBar){
-    const cache = localStorage.getItem('siq_usuarios_cache');
-    const n     = cache ? (() => { try{return JSON.parse(cache).length;}catch(e){return 0;} })() : 0;
-    debugBar.innerHTML = [
-      '🔗 API URL: <strong>'+(apiUrl ? apiUrl.slice(0,60)+'…' : 'não configurada')+'</strong>',
-      '💾 Cache local: <strong style="color:var(--accent)">'+n+' usuário(s)</strong>',
-    ].join('<br>');
-  }
-
-  // Carrega e renderiza lista
-  const container = document.getElementById('usuariosList');
-  if(!container) return;
-  container.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px">⏳ Carregando…</div>';
-  try{
-    const lista = await loadUsuarios();
-    if(!lista.length){
-      container.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text3)">
-        <div style="font-size:48px;margin-bottom:16px;opacity:.3">👥</div>
-        <div style="font-size:16px;font-weight:600;color:var(--text2);margin-bottom:8px">Nenhum usuário</div>
-        <div style="font-size:13px">Crie o primeiro usuário para liberar o acesso<br>por email e senha.</div>
-      </div>`;
-      return;
-    }
-    container.innerHTML = lista.map(u => `
-      <div style="display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px">
-        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#7c5cbf,#4f8cff);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#fff;flex-shrink:0">${(u.nome||u.email)[0].toUpperCase()}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600;color:var(--text1)">${u.nome||'—'}</div>
-          <div style="font-size:12px;color:var(--text3);font-family:var(--mono)">${u.email}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px">Criado: ${u.criadoEm?new Date(u.criadoEm).toLocaleDateString('pt-BR'):'—'}</div>
-        </div>
-        <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:${u.ativo===false?'rgba(255,59,92,0.15)':'rgba(0,229,160,0.15)'};color:${u.ativo===false?'var(--red)':'var(--accent)'}">${u.ativo===false?'INATIVO':'ATIVO'}</span>
-        <button onclick="toggleUser('${u.email}')" style="background:var(--panel);color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px">${u.ativo===false?'Ativar':'Desativar'}</button>
-        <button onclick="deleteUser('${u.email}')" style="background:rgba(255,59,92,0.1);color:var(--red);border:1px solid rgba(255,59,92,0.2);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:14px">🗑</button>
-      </div>`).join('');
-  }catch(e){
-    container.innerHTML = '<div style="color:var(--red);padding:16px">Erro ao carregar usuários: '+e.message+'</div>';
-  }
-}
-
-async function toggleUser(email){
   const lista = await loadUsuarios();
-  const u = lista.find(x=>x.email===email);
-  if(u){ u.ativo = u.ativo===false ? true : false; }
-  await saveUsuarios(lista);
-  renderUsuarios();
-  toast(u?.ativo ? '✅ Usuário ativado' : '⚠ Usuário desativado', u?.ativo ? 'success' : 'warning');
-}
-
-async function deleteUser(email){
-  if(!confirm('Excluir usuário '+email+'?')) return;
-  const lista = await loadUsuarios();
-  await saveUsuarios(lista.filter(u=>u.email!==email));
-  renderUsuarios();
-  toast('Usuário removido','success');
+  const el = document.getElementById('usuariosList');
+  if(!lista||!lista.length){
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum usuário</div><div class="empty-sub">Crie o primeiro usuário para liberar o acesso por email e senha.</div></div>';
+    return;
+  }
+  el.innerHTML = lista.map(u=>`
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px">
+      <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--purple));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0">${(u.nome||u.email)[0].toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700">${u.nome||'—'}</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text2)">${u.email}</div>
+      </div>
+      <span style="font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:5px;${u.ativo===false?'background:var(--red-dim);color:var(--red);border:1px solid rgba(255,59,92,.3)':'background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,229,160,.3)'}">${u.ativo===false?'INATIVO':'ATIVO'}</span>
+      <button class="btn btn-ghost" style="font-size:11px" onclick="toggleUsuario('${u.email}')">${u.ativo===false?'Ativar':'Desativar'}</button>
+      <button class="btn btn-red" style="font-size:11px" onclick="deletarUsuario('${u.email}')">🗑</button>
+    </div>
+  `).join('');
 }
 
 function abrirModalNovoUsuario(){
@@ -1114,32 +1081,14 @@ async function criarUsuario(){
   const senha = document.getElementById('nu-senha').value;
   if(!nome||!email||!senha){toast('⚠ Preencha todos os campos','error');return;}
   if(senha.length<6){toast('⚠ Senha deve ter pelo menos 6 caracteres','error');return;}
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('⚠ Email inválido','error');return;}
-
-  const btnCriar = document.querySelector('#modalNovoUsuario .btn-primary');
-  btnCriar.textContent = '⏳ Salvando…';
-  btnCriar.disabled = true;
-
-  try{
-    console.log('criarUsuario: carregando lista...');
-    const lista = await loadUsuarios();
-    console.log('criarUsuario: lista atual:', lista.length, 'usuários');
-    if(lista.find(u=>u.email===email)){toast('⚠ Email já cadastrado','error');btnCriar.textContent='✔ Criar';btnCriar.disabled=false;return;}
-    const hash = await sha256(senha);
-    lista.push({nome,email,senha:hash,role:'user',ativo:true,criadoEm:new Date().toISOString()});
-    console.log('criarUsuario: salvando lista com', lista.length, 'usuários...');
-    await saveUsuarios(lista);
-    console.log('criarUsuario: salvo! Cache local:', localStorage.getItem('siq_usuarios_cache')?.length, 'bytes');
-    fecharModalNovoUsuario();
-    renderUsuarios();
-    toast(`✅ Usuário "${nome}" criado! Pode fazer login com email/senha.`,'success');
-  } catch(e){
-    toast('❌ Erro ao salvar usuário: '+e.message,'error');
-    console.error('criarUsuario error:', e);
-  } finally {
-    btnCriar.textContent='✔ Criar';
-    btnCriar.disabled=false;
-  }
+  const lista = await loadUsuarios();
+  if(lista.find(u=>u.email===email)){toast('⚠ Email já cadastrado','error');return;}
+  const hash = await sha256(senha);
+  lista.push({nome,email,senha:hash,role:'user',ativo:true,criadoEm:new Date().toISOString()});
+  await saveUsuarios(lista);
+  fecharModalNovoUsuario();
+  renderUsuarios();
+  toast(`✅ Usuário "${nome}" criado com sucesso!`,'success');
 }
 
 async function deletarUsuario(email){
@@ -1166,8 +1115,7 @@ function toast(msg,type=''){const el=document.getElementById('toast');el.textCon
 
 // ═══ INIT ═══
 loadTheme();
-// Inicializa GSI para renovação de token
-window.onload = function(){
-  loadTheme();
-  driveInit();
-};
+driveInit();
+</script>
+</body>
+</html>
