@@ -202,13 +202,9 @@ async function loginSenha(){
       return;
     }
 
-    // Login OK
-    // Usa token do admin se disponível (para sincronizar com Drive)
-    // Se não tiver token válido, entra em modo local (dados do localStorage)
-    const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY)||'';
-    // Marca sessão como autenticada por senha (não por Google direto)
-    // gapi_token pode ser vazio — app.html lida com isso sem redirecionar
-    sessionStorage.setItem('gapi_token', adminToken || 'password_auth');
+    // Login OK — sempre usa 'password_auth' para login por senha
+    // app.html lida com Drive de forma independente usando localStorage
+    sessionStorage.setItem('gapi_token', 'password_auth');
     sessionStorage.setItem('gapi_user', JSON.stringify({
       name: user.nome||user.email,
       email: user.email,
