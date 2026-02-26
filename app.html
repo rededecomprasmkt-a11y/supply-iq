@@ -248,7 +248,7 @@ td{padding:7px 11px;border-right:1px solid var(--border);vertical-align:middle}t
     <button class="nav-tab" onclick="switchView('usuarios')" id="tab-usuarios" style="display:none">👥 Usuários</button>
   </div>
   <div class="header-right">
-    <div class="sync-dot" id="syncDot" title="Sincronizado com Google Drive"></div>
+    <div class="sync-dot" id="syncDot" onclick="showApiConfig()" style="cursor:pointer" title="Clique para configurar o backend"></div>
     <div class="user-chip" id="userChip">
       <div class="user-avatar" id="userAvatar">?</div>
       <span class="user-name" id="userName">…</span>
@@ -514,28 +514,28 @@ async function syncComApi(){
 }
 
 function showApiConfig(){
-  // Cria modal de configuração da URL da API se não existir
   if(document.getElementById('modalApiConfig')) return;
   const m = document.createElement('div');
   m.id = 'modalApiConfig';
-  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px';
   m.innerHTML = `
-    <div style="background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:520px;width:100%">
-      <h2 style="color:var(--text1);margin:0 0 8px;font-size:18px">⚙️ Configurar Backend</h2>
-      <p style="color:var(--text3);font-size:13px;margin:0 0 20px">Cole a URL do seu Google Apps Script para sincronizar dados entre todos os usuários.</p>
-      <label style="color:var(--text2);font-size:12px;font-family:var(--mono)">URL DO APPS SCRIPT</label>
+    <div style="background:#141c2b;border:1px solid #253754;border-radius:16px;padding:28px;max-width:520px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,0.7)">
+      <h2 style="color:#e8f0fe;margin:0 0 6px;font-size:18px">⚙️ Configurar Backend</h2>
+      <p style="color:#94afd4;font-size:13px;margin:0 0 20px;line-height:1.5">Cole a URL do seu Google Apps Script para sincronizar dados entre todos os usuários via Google Sheets.</p>
+      <label style="color:#94afd4;font-size:11px;font-family:monospace;letter-spacing:1px">URL DO APPS SCRIPT</label>
       <input id="inputApiUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec"
-        style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text1);padding:10px 12px;font-size:13px;margin:6px 0 16px;font-family:var(--mono)"
+        style="width:100%;box-sizing:border-box;background:#0b0f18;border:1px solid #253754;border-radius:8px;color:#e8f0fe;padding:11px 13px;font-size:13px;margin:6px 0 16px;font-family:monospace;outline:none"
         value="${localStorage.getItem('siq_api_url')||''}">
       <div style="display:flex;gap:10px">
-        <button onclick="salvarApiUrl()" style="flex:1;background:var(--accent);color:#000;border:none;border-radius:8px;padding:11px;font-weight:700;cursor:pointer;font-size:14px">Salvar e Conectar</button>
-        <button onclick="document.getElementById('modalApiConfig').remove()" style="background:var(--panel);color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:11px 16px;cursor:pointer;font-size:14px">Fechar</button>
+        <button onclick="salvarApiUrl()" style="flex:1;background:#00e5a0;color:#000;border:none;border-radius:8px;padding:12px;font-weight:700;cursor:pointer;font-size:14px;font-family:inherit">✔ Salvar e Conectar</button>
+        <button onclick="document.getElementById('modalApiConfig').remove()" style="background:#192233;color:#94afd4;border:1px solid #253754;border-radius:8px;padding:12px 16px;cursor:pointer;font-size:14px;font-family:inherit">Fechar</button>
       </div>
-      <p style="color:var(--text3);font-size:11px;margin:14px 0 0;font-family:var(--mono)">
-        📋 Não tem a URL? Veja o README_SETUP.txt para instruções de configuração.
+      <p style="color:#4f6a90;font-size:11px;margin:14px 0 0;font-family:monospace">
+        📋 Ainda não criou o script? Siga o README_SETUP.txt do ZIP.
       </p>
     </div>`;
   document.body.appendChild(m);
+  setTimeout(()=>{ const inp=document.getElementById('inputApiUrl'); if(inp)inp.focus(); },100);
 }
 
 async function salvarApiUrl(){
