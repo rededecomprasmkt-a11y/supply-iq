@@ -367,12 +367,15 @@ td{padding:7px 11px;border-right:1px solid var(--border);vertical-align:middle}t
 </div>
 <div class="view" id="view-usuarios">
   <div style="flex:1;overflow-y:auto;padding:28px 32px;max-width:700px;margin:0 auto;width:100%">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div>
         <div style="font-size:20px;font-weight:800;letter-spacing:-.3px">👥 Gerenciar Usuários</div>
         <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-top:3px">Usuários com acesso ao sistema via email/senha</div>
       </div>
       <button class="btn btn-primary" onclick="abrirModalNovoUsuario()">＋ Novo Usuário</button>
+    </div>
+    <div id="driveStatusBar" style="margin-bottom:16px;padding:10px 14px;border-radius:8px;font-family:var(--mono);font-size:11px;background:var(--panel);border:1px solid var(--border);color:var(--text3)">
+      🔄 Verificando conexão com Drive…
     </div>
     <div id="usuariosList" style="display:flex;flex-direction:column;gap:10px">
       <div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum usuário</div><div class="empty-sub">Crie o primeiro usuário para liberar o acesso por email e senha.</div></div>
@@ -436,6 +439,25 @@ async function driveInit(){
   S.driveToken = sessionStorage.getItem('gapi_token');
   if(!S.driveToken){ window.location.href='index.html'; return; }
 
+  // Verifica se o token ainda é válido antes de usar
+  try{
+    const testR = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token='+S.driveToken);
+    const testData = await testR.json();
+    if(testData.error){
+      // Token expirado — tenta renovar se é admin
+      const newToken = await renovarTokenSilencioso();
+      if(newToken){
+        S.driveToken = newToken;
+        sessionStorage.setItem('gapi_token', newToken);
+        localStorage.setItem('siq_admin_token', newToken);
+      } else {
+        // Usuário normal com token expirado — mostra aviso mas carrega dados locais
+        setSyncDot('error');
+        showTokenWarning();
+      }
+    }
+  } catch(e){ /* ignora falha de verificação */ }
+
   // Show user info
   try{
     const u = JSON.parse(sessionStorage.getItem('gapi_user')||'{}');
@@ -476,6 +498,58 @@ async function driveInit(){
     toast('⚠ Erro ao conectar com Drive. Usando dados locais.','warning');
     loadLocal();
     renderFornecList(); renderNfeHist();
+  }
+}
+
+// Renovação silenciosa de token (funciona quando o usuário já autorizou antes)
+let _tokenClient;
+function renovarTokenSilencioso(){
+  return new Promise((resolve)=>{
+    try{
+      if(!_tokenClient){
+        _tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID, scope: SCOPES, prompt: '',
+          callback:(resp)=>resolve(resp.error ? null : resp.access_token),
+        });
+      } else {
+        // Reusa o client já criado
+        const origCb = _tokenClient.callback;
+        _tokenClient.callback = (resp) => {
+          _tokenClient.callback = origCb;
+          resolve(resp.error ? null : resp.access_token);
+        };
+      }
+      _tokenClient.requestAccessToken({prompt:''});
+    }catch(e){resolve(null);}
+  });
+}
+
+function showTokenWarning(){
+  // Cria banner de aviso de token expirado
+  const existing = document.getElementById('tokenWarningBar');
+  if(existing) return;
+  const bar = document.createElement('div');
+  bar.id = 'tokenWarningBar';
+  bar.style.cssText = 'background:rgba(255,211,78,0.1);border-bottom:1px solid rgba(255,211,78,0.3);padding:7px 18px;font-family:var(--mono);font-size:11px;color:var(--yellow);display:flex;align-items:center;gap:10px;flex-shrink:0;z-index:50';
+  bar.innerHTML = `⚠ Sessão expirada — salvamento no Drive desativado. Dados salvos localmente. <button onclick="reautenticar()" style="background:var(--yellow);color:#000;border:none;border-radius:5px;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--mono)">🔄 Renovar sessão</button>`;
+  document.querySelector('.layout').before(bar);
+}
+
+async function reautenticar(){
+  const newToken = await renovarTokenSilencioso();
+  if(newToken){
+    S.driveToken = newToken;
+    sessionStorage.setItem('gapi_token', newToken);
+    localStorage.setItem('siq_admin_token', newToken);
+    const bar = document.getElementById('tokenWarningBar');
+    if(bar) bar.remove();
+    setSyncDot('ok');
+    toast('✅ Sessão renovada! Drive ativo.','success');
+    // Tenta sincronizar dados locais pendentes
+    save();
+  } else {
+    // Precisa de login interativo
+    toast('⚠ Não foi possível renovar automaticamente. Faça logout e entre novamente.','warning');
   }
 }
 
@@ -582,6 +656,22 @@ function save(key){
   setSyncDot('syncing');
   S.syncTimer = setTimeout(async ()=>{
     try{
+      // Verifica token antes de salvar
+      const testR = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token='+S.driveToken);
+      const testData = await testR.json();
+      if(testData.error){
+        // Tenta renovar silenciosamente
+        const newToken = await renovarTokenSilencioso();
+        if(newToken){
+          S.driveToken = newToken;
+          sessionStorage.setItem('gapi_token', newToken);
+          localStorage.setItem('siq_admin_token', newToken);
+        } else {
+          setSyncDot('error');
+          showTokenWarning();
+          return;
+        }
+      }
       const keys = Object.keys(S.syncQueue);
       S.syncQueue={};
       for(const k of keys){
@@ -591,9 +681,9 @@ function save(key){
       setSyncDot('ok');
     }catch(e){
       console.error('Sync error:',e);
-      if(e.status===401){ sessionStorage.clear(); window.location.href='index.html'; return; }
+      if(e.status===401){ showTokenWarning(); setSyncDot('error'); return; }
       setSyncDot('error');
-      toast('⚠ Erro ao salvar no Drive','warning');
+      toast('⚠ Erro ao salvar no Drive. Dados salvos localmente.','warning');
     }
   }, 1200);
 }
@@ -1046,24 +1136,49 @@ async function saveUsuarios(lista){
 }
 
 async function renderUsuarios(){
-  const lista = await loadUsuarios();
-  const el = document.getElementById('usuariosList');
-  if(!lista||!lista.length){
-    el.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum usuário</div><div class="empty-sub">Crie o primeiro usuário para liberar o acesso por email e senha.</div></div>';
-    return;
+  // Atualiza status do Drive
+  const statusBar = document.getElementById('driveStatusBar');
+  if(statusBar){
+    try{
+      const testR = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token='+S.driveToken);
+      const testData = await testR.json();
+      if(testData.error){
+        statusBar.innerHTML = '❌ <strong style="color:var(--red)">Token expirado.</strong> Drive desconectado. <button onclick="reautenticar()" style="background:var(--yellow);color:#000;border:none;border-radius:5px;padding:2px 9px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--mono);margin-left:8px">🔄 Renovar Sessão</button>';
+        statusBar.style.cssText += ';border-color:rgba(255,59,92,0.3);background:rgba(255,59,92,0.07);color:var(--red)';
+      } else {
+        const mins = Math.round(parseInt(testData.expires_in)/60);
+        statusBar.innerHTML = `✅ <strong style="color:var(--accent)">Drive conectado.</strong> Token expira em <strong style="color:var(--yellow)">${mins} min</strong>. Usuários criados aqui poderão fazer login pela tela de email/senha.`;
+        statusBar.style.cssText += ';border-color:rgba(0,229,160,0.2);background:rgba(0,229,160,0.05)';
+      }
+    }catch(e){
+      statusBar.innerHTML = '⚠ Não foi possível verificar o Drive.';
+    }
   }
-  el.innerHTML = lista.map(u=>`
-    <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px">
-      <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--purple));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0">${(u.nome||u.email)[0].toUpperCase()}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:700">${u.nome||'—'}</div>
-        <div style="font-family:var(--mono);font-size:11px;color:var(--text2)">${u.email}</div>
+
+  const el = document.getElementById('usuariosList');
+  el.innerHTML = '<div style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:8px">Carregando usuários…</div>';
+  try{
+    const lista = await loadUsuarios();
+    if(!lista||!lista.length){
+      el.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum usuário</div><div class="empty-sub">Crie o primeiro usuário para liberar o acesso por email e senha.</div></div>';
+      return;
+    }
+    el.innerHTML = lista.map(u=>`
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px">
+        <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--purple));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0">${(u.nome||u.email)[0].toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700">${u.nome||'—'}</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--text2)">${u.email}</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px">Criado: ${u.criadoEm?new Date(u.criadoEm).toLocaleDateString('pt-BR'):'-'}</div>
+        </div>
+        <span style="font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:5px;${u.ativo===false?'background:var(--red-dim);color:var(--red);border:1px solid rgba(255,59,92,.3)':'background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,229,160,.3)'}">${u.ativo===false?'INATIVO':'ATIVO'}</span>
+        <button class="btn btn-ghost" style="font-size:11px" onclick="toggleUsuario('${u.email}')">${u.ativo===false?'Ativar':'Desativar'}</button>
+        <button class="btn btn-red" style="font-size:11px" onclick="deletarUsuario('${u.email}')">🗑</button>
       </div>
-      <span style="font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:5px;${u.ativo===false?'background:var(--red-dim);color:var(--red);border:1px solid rgba(255,59,92,.3)':'background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,229,160,.3)'}">${u.ativo===false?'INATIVO':'ATIVO'}</span>
-      <button class="btn btn-ghost" style="font-size:11px" onclick="toggleUsuario('${u.email}')">${u.ativo===false?'Ativar':'Desativar'}</button>
-      <button class="btn btn-red" style="font-size:11px" onclick="deletarUsuario('${u.email}')">🗑</button>
-    </div>
-  `).join('');
+    `).join('');
+  }catch(e){
+    el.innerHTML = `<div style="background:var(--red-dim);border:1px solid rgba(255,59,92,.3);border-radius:8px;padding:12px;font-family:var(--mono);font-size:11px;color:var(--red)">❌ Erro ao carregar usuários: ${e.message}. Verifique se o Drive está conectado.</div>`;
+  }
 }
 
 function abrirModalNovoUsuario(){
@@ -1081,14 +1196,34 @@ async function criarUsuario(){
   const senha = document.getElementById('nu-senha').value;
   if(!nome||!email||!senha){toast('⚠ Preencha todos os campos','error');return;}
   if(senha.length<6){toast('⚠ Senha deve ter pelo menos 6 caracteres','error');return;}
-  const lista = await loadUsuarios();
-  if(lista.find(u=>u.email===email)){toast('⚠ Email já cadastrado','error');return;}
-  const hash = await sha256(senha);
-  lista.push({nome,email,senha:hash,role:'user',ativo:true,criadoEm:new Date().toISOString()});
-  await saveUsuarios(lista);
-  fecharModalNovoUsuario();
-  renderUsuarios();
-  toast(`✅ Usuário "${nome}" criado com sucesso!`,'success');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('⚠ Email inválido','error');return;}
+
+  // Verifica se tem token do admin
+  if(!S.driveToken){
+    toast('⚠ Sem conexão com Drive. Faça logout e entre novamente.','error');
+    return;
+  }
+
+  const btnCriar = document.querySelector('#modalNovoUsuario .btn-primary');
+  btnCriar.textContent = '⏳ Salvando…';
+  btnCriar.disabled = true;
+
+  try{
+    const lista = await loadUsuarios();
+    if(lista.find(u=>u.email===email)){toast('⚠ Email já cadastrado','error');btnCriar.textContent='✔ Criar';btnCriar.disabled=false;return;}
+    const hash = await sha256(senha);
+    lista.push({nome,email,senha:hash,role:'user',ativo:true,criadoEm:new Date().toISOString()});
+    await saveUsuarios(lista);
+    fecharModalNovoUsuario();
+    renderUsuarios();
+    toast(`✅ Usuário "${nome}" criado! Pode fazer login com email/senha.`,'success');
+  } catch(e){
+    toast('❌ Erro ao salvar usuário: '+e.message,'error');
+    console.error(e);
+  } finally {
+    btnCriar.textContent='✔ Criar';
+    btnCriar.disabled=false;
+  }
 }
 
 async function deletarUsuario(email){
@@ -1115,7 +1250,27 @@ function toast(msg,type=''){const el=document.getElementById('toast');el.textCon
 
 // ═══ INIT ═══
 loadTheme();
-driveInit();
+// Inicializa GSI para renovação de token
+window.onload = function(){
+  try{
+    _tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID, scope: SCOPES, prompt: '',
+      callback: (resp)=>{
+        if(!resp.error && resp.access_token){
+          S.driveToken = resp.access_token;
+          sessionStorage.setItem('gapi_token', resp.access_token);
+          localStorage.setItem('siq_admin_token', resp.access_token);
+          const bar = document.getElementById('tokenWarningBar');
+          if(bar) bar.remove();
+          setSyncDot('ok');
+          toast('✅ Sessão renovada!','success');
+          save();
+        }
+      }
+    });
+  }catch(e){}
+  driveInit();
+};
 </script>
 </body>
 </html>
