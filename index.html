@@ -146,21 +146,21 @@ function showError(msg){const el=document.getElementById('errorMsg');el.style.di
 function hideError(){document.getElementById('errorMsg').style.display='none';}
 
 // ─── Login por senha ───
-// Usa cache local (localStorage) — NÃO depende do token do admin estar válido
 async function loginSenha(){
   const email = document.getElementById('inputEmail').value.trim().toLowerCase();
   const senha = document.getElementById('inputSenha').value;
   if(!email||!senha){showError('Preencha email e senha.');return;}
+  hideError();
   showLoading('Verificando credenciais…');
   try{
-    // 1. Tenta carregar usuários do cache local (funciona mesmo com token expirado)
+    // Lê cache local de usuários
     let usuarios = null;
     const cache = localStorage.getItem('siq_usuarios_cache');
     if(cache){
       try{ usuarios = JSON.parse(cache); }catch(e){}
     }
 
-    // 2. Se não tem cache local, tenta buscar do Drive com o token do admin
+    // Se não tem cache, tenta Drive
     if(!usuarios || !usuarios.length){
       const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY);
       if(adminToken){
@@ -179,7 +179,6 @@ async function loginSenha(){
               );
               if(r2.ok){
                 usuarios = await r2.json();
-                // Salva no cache para próximos logins
                 localStorage.setItem('siq_usuarios_cache', JSON.stringify(usuarios));
               }
             }
@@ -190,20 +189,35 @@ async function loginSenha(){
 
     if(!usuarios || !usuarios.length){
       hideLoading();
-      showError('⚠ Nenhum usuário cadastrado. Peça ao admin para criar sua conta na aba "👥 Usuários".');
+      showError('⚠ Nenhum usuário cadastrado. Acesse a aba 🔵 Google como admin e crie usuários em "👥 Usuários".');
       return;
     }
 
+    showLoading('Verificando senha…');
     const hash = await sha256(senha);
+
+    // Debug: mostra emails disponíveis para ajudar diagnóstico
+    console.log('Usuários no cache:', usuarios.map(u=>u.email));
+    console.log('Tentando login:', email, '| hash calculado:', hash.slice(0,16)+'…');
+    console.log('Hash no cache:', usuarios.find(u=>u.email===email)?.senha?.slice(0,16)+'…');
+
     const user = usuarios.find(u=>u.email===email && u.senha===hash && u.ativo!==false);
+
     if(!user){
       hideLoading();
-      showError('Email ou senha incorretos.');
+      // Verifica se email existe mas senha está errada
+      const emailExists = usuarios.find(u=>u.email===email);
+      if(emailExists && emailExists.ativo===false){
+        showError('Conta desativada. Fale com o admin.');
+      } else if(emailExists){
+        showError('Senha incorreta.');
+      } else {
+        showError('Email não encontrado: '+email);
+      }
       return;
     }
 
-    // Login OK — sempre usa 'password_auth' para login por senha
-    // app.html lida com Drive de forma independente usando localStorage
+    // Login OK
     sessionStorage.setItem('gapi_token', 'password_auth');
     sessionStorage.setItem('gapi_user', JSON.stringify({
       name: user.nome||user.email,
@@ -211,18 +225,29 @@ async function loginSenha(){
       picture: '',
       role: user.role||'user'
     }));
-    window.location.href='app.html';
+    showLoading('Entrando…');
+    setTimeout(()=>{ window.location.href='app.html'; }, 300);
   }catch(e){
-    hideLoading();showError('Erro ao verificar login: '+e.message);
+    hideLoading();
+    showError('Erro: '+e.message);
+    console.error('loginSenha error:', e);
   }
 }
 
 // ─── Login Google (admin) ───
 let tokenClient;
 window.onload = function(){
-  // Se já tem sessão, vai direto
-  if(sessionStorage.getItem('gapi_token')&&sessionStorage.getItem('gapi_user')){
+  // Só redireciona automaticamente se a sessão é do Google (admin)
+  // Login por senha (password_auth) não redireciona - deixa o usuário na página de login
+  const existingToken = sessionStorage.getItem('gapi_token');
+  const existingUser = sessionStorage.getItem('gapi_user');
+  if(existingToken && existingUser && existingToken !== 'password_auth'){
     showLoading('Retomando sessão…');window.location.href='app.html';return;
+  }
+  // Limpa qualquer sessão de senha antiga para evitar loops
+  if(existingToken === 'password_auth'){
+    sessionStorage.removeItem('gapi_token');
+    sessionStorage.removeItem('gapi_user');
   }
   try{
     tokenClient = google.accounts.oauth2.initTokenClient({
