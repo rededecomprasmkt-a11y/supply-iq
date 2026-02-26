@@ -150,12 +150,24 @@ async function loginSenha(){
   if(!email||!senha){showError('Preencha email e senha.');return;}
   showLoading('Verificando credenciais…');
   try{
-    // Precisamos do token do admin para ler usuarios.json
-    const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY);
+    // Tenta renovar token do admin silenciosamente primeiro
+    let adminToken = localStorage.getItem(ADMIN_TOKEN_KEY);
     if(!adminToken){
       hideLoading();
       showError('⚠ Admin ainda não configurou o sistema. Peça ao admin para logar com Google primeiro.');
       return;
+    }
+    // Verifica se token ainda é válido
+    const testR = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token='+adminToken);
+    if(!testR.ok || (await testR.json()).error){
+      // Token expirado — tenta renovar silenciosamente
+      adminToken = await renovarTokenSilencioso();
+      if(!adminToken){
+        hideLoading();
+        showError('⚠ Sessão expirada. Peça ao admin para logar com Google novamente para renovar o acesso.');
+        return;
+      }
+      localStorage.setItem(ADMIN_TOKEN_KEY, adminToken);
     }
     // Busca usuarios.json no Drive do admin
     const usuarios = await readUsuarios(adminToken);
@@ -163,13 +175,25 @@ async function loginSenha(){
     const hash = await sha256(senha);
     const user = usuarios.find(u=>u.email===email && u.senha===hash && u.ativo!==false);
     if(!user){hideLoading();showError('Email ou senha incorretos.');return;}
-    // Salva sessão como usuário comum (usa token do admin para Drive)
     sessionStorage.setItem('gapi_token', adminToken);
     sessionStorage.setItem('gapi_user', JSON.stringify({name:user.nome||user.email,email:user.email,picture:'',role:user.role||'user'}));
     window.location.href='app.html';
   }catch(e){
     hideLoading();showError('Erro ao verificar login: '+e.message);
   }
+}
+
+function renovarTokenSilencioso(){
+  return new Promise((resolve)=>{
+    try{
+      const tc = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID, scope: SCOPES,
+        prompt: '',
+        callback:(resp)=>resolve(resp.error ? null : resp.access_token),
+      });
+      tc.requestAccessToken({prompt:''});
+    }catch(e){resolve(null);}
+  });
 }
 
 async function readUsuarios(token){
