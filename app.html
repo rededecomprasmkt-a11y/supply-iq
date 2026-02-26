@@ -437,10 +437,23 @@ function gasUrl(){
 async function gasCall(action, extra={}){
   const url = gasUrl();
   if(!url) throw new Error('URL do backend (Apps Script) não configurada.');
+  const payload = { action, key: SECRET_KEY, ...extra };
+
+  // Apps Script redireciona POST cross-origin via 302.
+  // Solução: GET para leituras (sem body grande), POST text/plain para escritas.
+  const readActions = ['login','getUsuarios','getFornecedores','getRequisicoes','getNfe','getAllData'];
+  if(readActions.includes(action)){
+    const qs = encodeURIComponent(JSON.stringify(payload));
+    const resp = await fetch(url + '?payload=' + qs, { redirect: 'follow' });
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    return await resp.json();
+  }
+  // Escritas: POST com text/plain evita preflight CORS
   const resp = await fetch(url, {
     method: 'POST',
-    headers: {'Content-Type':'text/plain'},
-    body: JSON.stringify({ action, key: SECRET_KEY, ...extra })
+    headers: {'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(payload),
+    redirect: 'follow'
   });
   if(!resp.ok) throw new Error('HTTP '+resp.status);
   return await resp.json();
