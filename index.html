@@ -192,34 +192,63 @@ const DEFAULT_ADMIN_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822
 
 async function loginAdmin(){
   const senha  = document.getElementById('inputAdminSenha').value;
-  if(!senha){ showError('Digite a senha do admin.'); return; }
+  const btn    = document.querySelector('#panel-google .btn-login');
 
-  const apiUrl = localStorage.getItem('siq_api_url');
-  if(!apiUrl){ showError('Cole a URL do Apps Script no campo acima primeiro.'); return; }
-
-  const btn = document.querySelector('#panel-google .btn-login');
-  btn.disabled = true; btn.textContent = '⏳ Verificando…';
+  // Feedback imediato
+  btn.disabled = true;
+  btn.textContent = '⏳ Verificando senha…';
   hideError();
 
+  if(!senha){
+    showError('Digite a senha do admin.');
+    btn.disabled=false; btn.textContent='Entrar como Admin';
+    return;
+  }
+
+  const apiUrl = localStorage.getItem('siq_api_url');
+  if(!apiUrl){
+    showError('Cole a URL do Apps Script no campo acima primeiro.');
+    btn.disabled=false; btn.textContent='Entrar como Admin';
+    return;
+  }
+
   try{
+    // 1. Verifica senha
     const senhaHash = await sha256(senha);
-    // Usa o hash salvo ou o padrão
     const adminHash = localStorage.getItem(ADMIN_HASH_KEY) || DEFAULT_ADMIN_HASH;
 
     if(senhaHash !== adminHash){
-      showError('Senha do admin incorreta. Padrão: admin123');
+      showError('Senha incorreta. Senha padrão: admin123');
+      btn.disabled=false; btn.textContent='Entrar como Admin';
       return;
     }
 
-    // Testa conexão com a API
-    showLoading('Conectando à API…');
-    const r = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {'Content-Type':'text/plain'},
-      body: JSON.stringify({ action:'getAllData', key: API_KEY })
-    });
-    if(!r.ok) throw new Error('API retornou HTTP '+r.status);
+    // 2. Testa conexão com API (com timeout de 10s)
+    btn.textContent = '⏳ Conectando à API…';
+    const controller = new AbortController();
+    const timeout = setTimeout(()=>controller.abort(), 10000);
 
+    let r;
+    try{
+      r = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {'Content-Type':'text/plain'},
+        body: JSON.stringify({ action:'getAllData', key: API_KEY }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+    }catch(fetchErr){
+      clearTimeout(timeout);
+      if(fetchErr.name==='AbortError'){
+        showError('Timeout: API demorou mais de 10s. Verifique a URL.');
+      } else {
+        // CORS ou rede — tenta entrar mesmo assim (API pode estar OK)
+        console.warn('Fetch error (may be CORS):', fetchErr.message);
+        r = null;
+      }
+    }
+
+    // 3. Entra no app (mesmo se API não respondeu — dados locais funcionam)
     sessionStorage.setItem('gapi_token', 'gas_admin');
     sessionStorage.setItem('gapi_user', JSON.stringify({
       name: 'Admin',
@@ -227,12 +256,11 @@ async function loginAdmin(){
       picture: '',
       role: 'admin'
     }));
-    showLoading('Entrando…');
-    setTimeout(()=>{ window.location.href='app.html'; }, 400);
+    btn.textContent = '✅ Entrando…';
+    window.location.href = 'app.html';
+
   }catch(e){
-    hideLoading();
-    showError('Erro: '+e.message);
-  } finally {
+    showError('Erro inesperado: '+e.message);
     btn.disabled=false; btn.textContent='Entrar como Admin';
   }
 }
