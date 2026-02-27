@@ -171,7 +171,7 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  width: 100%;
+  max-width: 100%;
 }
 
 /* ── SIDEBAR ── */
@@ -219,6 +219,8 @@ body {
 /* ── VIEWS ── */
 .view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
 .view.active { display: flex; }
+/* Ensure all views with analysis-layout take full width */
+.view.active .analysis-layout { width: 100%; }
 
 /* ── ANALYSIS VIEW ── */
 .analysis-layout { display: flex; flex: 1; overflow: hidden; }
@@ -702,6 +704,19 @@ td:last-child { border-right: none; }
 /* spinner */
 .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.3); border-top-color: #000; border-radius: 50%; animation: sp 0.6s linear infinite; }
 @keyframes sp { to { transform: rotate(360deg); } }
+
+/* ── FORCE FULL WIDTH FOR ALL VIEWS EXCEPT ANALYSIS ── */
+#view-produtos.active,
+#view-requisicoes.active,
+#view-fornecedores.active,
+#view-nfe.active,
+#view-usuarios.active {
+  width: 100%;
+  flex: 1;
+}
+
+/* When not in analysis view, ensure layout fills completely */
+body:not(.view-analysis) .layout { width: 100%; }
 </style>
 </head>
 <body>
@@ -779,7 +794,7 @@ td:last-child { border-right: none; }
 <div class="main">
 
 <!-- ═══ ANÁLISE VIEW ═══ -->
-<div class="view active" id="view-analysis">
+<div class="view" id="view-analysis">
   <div class="analysis-layout">
 
     <!-- Left Panel -->
@@ -1223,6 +1238,9 @@ function switchView(v) {
   // Sidebar só aparece na view de análise (tem painel lateral próprio)
   const sidebar = document.getElementById('mainSidebar');
   if (sidebar) sidebar.style.display = (v === 'analysis') ? '' : 'none';
+  // Mark body with current view for CSS targeting
+  document.body.className = document.body.className.replace(/view-\w+/g, '').trim();
+  document.body.classList.add('view-' + v);
   if (v === 'requisicoes') renderReqList();
   if (v === 'fornecedores') renderFornecList();
   if (v === 'nfe') renderNfeHist();
@@ -2763,8 +2781,6 @@ function applyTheme() {
 // ═══════════════════════════════════════════════════════════════════
 async function appInit() {
   applyTheme();
-  // Set initial view correctly (shows analysis with sidebar)
-  switchView('analysis');
   // Check session
   const token = sessionStorage.getItem('gapi_token');
   const userStr = sessionStorage.getItem('gapi_user');
@@ -2785,6 +2801,8 @@ async function appInit() {
     }
   } catch(e) {}
 
+  // Set initial view
+  switchView('analysis');
   // Load local cache first (instant display)
   load();
   renderFornecList();
