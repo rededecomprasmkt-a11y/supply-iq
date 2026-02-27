@@ -864,7 +864,7 @@ td:last-child { border-right: none; }
 
       <!-- Toolbar -->
       <div class="toolbar">
-        <input class="search-input" type="search" id="searchBox" name="q_analysis" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="🔍  Buscar EAN, produto ou marca…" oninput="this._typed=true;applyFilters()">
+        <input class="search-input" type="search" id="searchBox" name="srch_20561" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="🔍  Buscar EAN, produto ou marca…" oninput="this._typed=true;applyFilters()" readonly onfocus="this.removeAttribute('readonly')">
         <button class="btn btn-orange" onclick="addSelectedToReq()" id="btnAddReq" style="display:none">
           ➕ Adicionar à Requisição
         </button>
@@ -1034,7 +1034,7 @@ async function switchView(v) {
   // Mark body with current view for CSS targeting
   document.body.className = document.body.className.replace(/(^|\s)view-\S+/g, '').trim();
   document.body.classList.add('view-' + v);
-  if (v === 'analysis') { const sb = document.getElementById('searchBox'); if(sb && sb.value && !sb._typed) sb.value=''; }
+  const sb = document.getElementById('searchBox'); if(sb && !sb._typed) { sb.value=''; }
   if (v === 'requisicoes') renderReqList();
   if (v === 'fornecedores') renderFornecList();
   if (v === 'nfe') renderNfeHist();
@@ -2281,8 +2281,11 @@ async function renderCatalogoFull() {
     // Usa getAllData para compatibilidade com versões anteriores do GAS
     const result = await gasCall('getAllData');
     if (result.ok && Array.isArray(result.catalogo)) {
-      S.catalogo = result.catalogo;
-      // Também atualiza outros dados em memória
+      // Expandir campos minificados (compatibilidade com formato antigo e novo)
+      S.catalogo = result.catalogo.map(p => p.e ? {
+        ean: p.e, desc: p.d, marca: p.m, ncm: p.n||'',
+        qtdTotal: p.q||0, disponivel: p.v||0, cmcTotal: p.c||0, updatedAt: p.u||''
+      } : p);
       if (Array.isArray(result.fornecedores)) S.fornecedores = result.fornecedores;
       if (Array.isArray(result.requisicoes))  S.requisicoes  = result.requisicoes;
       if (Array.isArray(result.nfe))          S.nfeHistory   = result.nfe;
@@ -2451,15 +2454,26 @@ function save(key) {
         const json = JSON.stringify(data);
         // Sempre usa chunks para catálogo (limite seguro: 50 itens ~8KB por chunk)
         if (k === 'catalogo') {
-          const CHUNK = 50;
           const total = data.length;
           toast('💾 Salvando catálogo (' + total + ' itens)…', '');
-          for (let i = 0; i < data.length; i += CHUNK) {
-            const chunk = data.slice(i, i + CHUNK);
+          // Minificar campos para caber no limite do GAS (~45KB por célula)
+          // Salva apenas campos essenciais para exibição
+          const mini = data.map(p => ({
+            e: p.ean, d: p.desc, m: p.marca, n: p.ncm||'',
+            q: p.qtdTotal||0, v: p.disponivel||0, c: p.cmcTotal||0, u: p.updatedAt||''
+          }));
+          const CHUNK = 100;
+          for (let i = 0; i < mini.length; i += CHUNK) {
+            const chunk = mini.slice(i, i + CHUNK);
             const r = await gasCall('saveCatalogoChunk', {data: chunk, offset: i, total, replace: i === 0});
-            if (!r.ok) throw new Error('Chunk ' + i + ' falhou: ' + (r.error||'?'));
+            if (!r.ok) {
+              // Fallback: tentar salvar tudo de uma vez com saveCatalogo
+              const r2 = await gasCall('saveCatalogo', {data: mini});
+              if (!r2.ok) throw new Error('Falha ao salvar catálogo: ' + (r2.error||r.error||'?'));
+              break;
+            }
           }
-          toast('✅ Catálogo salvo no servidor (' + total + ' itens)', 'success');
+          toast('✅ Catálogo salvo (' + total + ' itens)', 'success');
         } else {
           const r = await gasCall(action, {data});
           if (!r.ok) throw new Error('Erro ao salvar ' + k + ': ' + (r.error||'?'));
@@ -2820,7 +2834,7 @@ appInit();
 
       <!-- Toolbar -->
       <div class="toolbar">
-        <input class="search-input" type="search" id="catSearchBox" name="q_catalog" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="🔍  Buscar código, descrição, marca ou NCM…" oninput="renderCatalogo()">
+        <input class="search-input" type="search" id="catSearchBox" name="srch_24897" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="🔍  Buscar código, descrição, marca ou NCM…" oninput="renderCatalogo()" readonly onfocus="this.removeAttribute('readonly')">
         <button class="btn btn-ghost" onclick="exportCatalogo()" style="font-size:11px">📥 Exportar XLSX</button>
         <button class="btn btn-red" onclick="limparCatalogo()" style="font-size:11px">🗑 Limpar</button>
         <span class="toolbar-info" id="catToolbarInfo">0 produtos</span>
