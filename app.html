@@ -2455,25 +2455,42 @@ function save(key) {
         // Sempre usa chunks para catálogo (limite seguro: 50 itens ~8KB por chunk)
         if (k === 'catalogo') {
           const total = data.length;
-          toast('💾 Salvando catálogo (' + total + ' itens)…', '');
-          // Minificar campos para caber no limite do GAS (~45KB por célula)
-          // Salva apenas campos essenciais para exibição
+          // Minificar: campos abreviados reduz ~60% do tamanho
           const mini = data.map(p => ({
             e: p.ean, d: p.desc, m: p.marca, n: p.ncm||'',
-            q: p.qtdTotal||0, v: p.disponivel||0, c: p.cmcTotal||0, u: p.updatedAt||''
+            q: p.qtdTotal||0, v: p.disponivel||0, c: p.cmcTotal||0
           }));
+          // Tentar com GAS novo (saveCatalogoChunk) primeiro
           const CHUNK = 100;
-          for (let i = 0; i < mini.length; i += CHUNK) {
-            const chunk = mini.slice(i, i + CHUNK);
-            const r = await gasCall('saveCatalogoChunk', {data: chunk, offset: i, total, replace: i === 0});
-            if (!r.ok) {
-              // Fallback: tentar salvar tudo de uma vez com saveCatalogo
-              const r2 = await gasCall('saveCatalogo', {data: mini});
-              if (!r2.ok) throw new Error('Falha ao salvar catálogo: ' + (r2.error||r.error||'?'));
-              break;
+          let usedChunk = false;
+          try {
+            for (let i = 0; i < mini.length; i += CHUNK) {
+              const chunk = mini.slice(i, i + CHUNK);
+              const r = await gasCall('saveCatalogoChunk', {data: chunk, offset: i, total, replace: i === 0});
+              if (!r.ok) {
+                if ((r.error||'').includes('desconhecida')) {
+                  // GAS antigo detectado — usar fallback
+                  break;
+                }
+                throw new Error(r.error||'Chunk falhou');
+              }
+              usedChunk = true;
             }
+          } catch(chunkErr) { usedChunk = false; }
+          if (!usedChunk) {
+            // GAS antigo: saveCatalogo direto com dados comprimidos
+            // Limit: tenta até 500 itens (seguro para ~45KB)
+            const safe = mini.slice(0, 500);
+            const r2 = await gasCall('saveCatalogo', {data: safe});
+            if (!r2.ok) throw new Error('Erro ao salvar: ' + (r2.error||'?'));
+            if (total > 500) {
+              toast('⚠ GAS desatualizado: apenas 500/' + total + ' itens salvos. Atualize o script GAS para salvar tudo.', 'error');
+            } else {
+              toast('✅ Catálogo salvo (' + safe.length + ' itens)', 'success');
+            }
+          } else {
+            toast('✅ Catálogo salvo (' + total + ' itens)', 'success');
           }
-          toast('✅ Catálogo salvo (' + total + ' itens)', 'success');
         } else {
           const r = await gasCall(action, {data});
           if (!r.ok) throw new Error('Erro ao salvar ' + k + ': ' + (r.error||'?'));
