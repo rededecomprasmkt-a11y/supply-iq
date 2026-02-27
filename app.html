@@ -864,7 +864,7 @@ td:last-child { border-right: none; }
 
       <!-- Toolbar -->
       <div class="toolbar">
-        <input class="search-input" type="text" id="searchBox" placeholder="🔍  Buscar EAN, produto ou marca…" oninput="applyFilters()">
+        <input class="search-input" type="text" autocomplete="off" id="searchBox" placeholder="🔍  Buscar EAN, produto ou marca…" oninput="applyFilters()" autocomplete="off">
         <button class="btn btn-orange" onclick="addSelectedToReq()" id="btnAddReq" style="display:none">
           ➕ Adicionar à Requisição
         </button>
@@ -2277,16 +2277,19 @@ async function renderCatalogoFull() {
   const syncing = document.getElementById('catSyncStatus');
   if (syncing) { syncing.style.display = 'flex'; }
   try {
-    const result = await gasCall('getCatalogo');
-    if (result.ok && Array.isArray(result.data)) {
-      // Sempre atualiza com a versão do servidor (mesmo que vazia)
-      S.catalogo = result.data;
+    // Usa getAllData para compatibilidade com versões anteriores do GAS
+    const result = await gasCall('getAllData');
+    if (result.ok && Array.isArray(result.catalogo)) {
+      S.catalogo = result.catalogo;
+      // Também atualiza outros dados em memória
+      if (Array.isArray(result.fornecedores)) S.fornecedores = result.fornecedores;
+      if (Array.isArray(result.requisicoes))  S.requisicoes  = result.requisicoes;
+      if (Array.isArray(result.nfe))          S.nfeHistory   = result.nfe;
       saveLocal();
     } else if (!result.ok) {
       throw new Error(result.error || 'Erro ao buscar catálogo');
     }
   } catch(e) {
-    // Usa cache local se servidor falhar
     console.warn('Catálogo: usando cache local —', e.message);
     toast('⚠ Catálogo: usando dados locais — ' + e.message, '');
   } finally {
@@ -2397,7 +2400,7 @@ const SECRET_KEY = 'supplyiq2026';
 
 function gasCall(action, extra={}) {
   const payload = { action, key: SECRET_KEY, ...extra };
-  const readActions = ['login','getUsuarios','getFornecedores','getRequisicoes','getNfe','getAllData','getCatalogo'];
+  const readActions = ['login','getUsuarios','getFornecedores','getRequisicoes','getNfe','getAllData'];
   if (readActions.includes(action)) {
     const qs = new URLSearchParams({ key: SECRET_KEY, action, payload: JSON.stringify(payload) }).toString();
     return fetch(GAS_URL + '?' + qs, { redirect: 'follow' })
@@ -2813,7 +2816,7 @@ appInit();
 
       <!-- Toolbar -->
       <div class="toolbar">
-        <input class="search-input" type="text" id="catSearchBox" placeholder="🔍  Buscar código, descrição, marca ou NCM…" oninput="renderCatalogo()">
+        <input class="search-input" type="text" autocomplete="off" id="catSearchBox" placeholder="🔍  Buscar código, descrição, marca ou NCM…" oninput="renderCatalogo()" autocomplete="off">
         <button class="btn btn-ghost" onclick="exportCatalogo()" style="font-size:11px">📥 Exportar XLSX</button>
         <button class="btn btn-red" onclick="limparCatalogo()" style="font-size:11px">🗑 Limpar</button>
         <span class="toolbar-info" id="catToolbarInfo">0 produtos</span>
