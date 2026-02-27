@@ -34,6 +34,48 @@
   --header: 52px;
 }
 
+/* ── LIGHT MODE ── */
+body.light {
+  --bg: #f0f4f8;
+  --bg2: #ffffff;
+  --panel: #e8eef5;
+  --panel2: #dde5ef;
+  --border: #c8d6e8;
+  --border2: #b0c4da;
+  --accent: #00a152;
+  --accent-dim: rgba(0,161,82,0.10);
+  --accent2: #1565c0;
+  --accent2-dim: rgba(21,101,192,0.10);
+  --orange: #e65100;
+  --orange-dim: rgba(230,81,0,0.10);
+  --red: #c62828;
+  --red-dim: rgba(198,40,40,0.10);
+  --yellow: #f57f17;
+  --yellow-dim: rgba(245,127,23,0.10);
+  --text: #0d1b2a;
+  --text2: #2c4a6e;
+  --text3: #5a7a9e;
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 14px;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
 
@@ -285,7 +327,7 @@ body {
 .btn-run:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
 
 /* ── RIGHT PANEL: table ── */
-.analysis-right { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+.analysis-right { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
 
 .toolbar {
   padding: 10px 16px;
@@ -663,6 +705,7 @@ td:last-child { border-right: none; }
     <button class="nav-tab" onclick="switchView('usuarios')" id="tab-usuarios" style="display:none">👥 Usuários</button>
   </div>
   <div class="header-right">
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Alternar modo claro/escuro">🌙</button>
     <div class="sync-dot" id="syncDot" title="Sincronizado"></div>
     <div class="user-chip">
       <div class="user-avatar" id="userAvatar">?</div>
@@ -947,11 +990,11 @@ td:last-child { border-right: none; }
 </div><!-- NF-e view end -->
 
 <!-- ═══ CATÁLOGO DE PRODUTOS VIEW ═══ -->
-<div class="view" id="view-produtos" style="height:100%">
-  <div class="analysis-layout" style="height:100%">
+<div class="view" id="view-produtos">
+  <div class="analysis-layout">
 
     <!-- Left Panel -->
-    <div class="analysis-left">
+    <div class="analysis-left" style="width:240px">
       <div class="panel-head" style="color:#00bcd4">🗂 Catálogo de Produtos</div>
 
       <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
@@ -985,12 +1028,12 @@ td:last-child { border-right: none; }
     <div class="analysis-right">
 
       <!-- KPI strip -->
-      <div class="kpi-strip">
-        <div class="kpi-item"><div class="kpi-label">📦 Total SKUs</div><div class="kpi-val" id="ckpi-total" style="color:#00bcd4">—</div><div class="kpi-sub">no catálogo</div></div>
-        <div class="kpi-item"><div class="kpi-label">🏷️ Marcas</div><div class="kpi-val" id="ckpi-marcas" style="color:var(--accent2)">—</div><div class="kpi-sub">distintas</div></div>
-        <div class="kpi-item"><div class="kpi-label">✅ Com Estoque</div><div class="kpi-val" id="ckpi-stock" style="color:var(--accent)">—</div><div class="kpi-sub">disponível &gt; 0</div></div>
-        <div class="kpi-item"><div class="kpi-label">⭕ Zerados</div><div class="kpi-val" id="ckpi-zero" style="color:var(--red)">—</div><div class="kpi-sub">sem estoque</div></div>
-        <div class="kpi-item"><div class="kpi-label">💰 CMC Total</div><div class="kpi-val" id="ckpi-cmc" style="color:var(--yellow);font-size:14px">—</div><div class="kpi-sub">valor em estoque</div></div>
+      <div class="kpi-strip" style="flex-wrap:wrap;min-height:unset">
+        <div class="kpi-item" style="min-width:0;flex:1 1 100px"><div class="kpi-label">📦 Total SKUs</div><div class="kpi-val" id="ckpi-total" style="color:#00bcd4;font-size:18px">—</div><div class="kpi-sub">no catálogo</div></div>
+        <div class="kpi-item" style="min-width:0;flex:1 1 100px"><div class="kpi-label">🏷️ Marcas</div><div class="kpi-val" id="ckpi-marcas" style="color:var(--accent2);font-size:18px">—</div><div class="kpi-sub">distintas</div></div>
+        <div class="kpi-item" style="min-width:0;flex:1 1 100px"><div class="kpi-label">✅ Com Estoque</div><div class="kpi-val" id="ckpi-stock" style="color:var(--accent);font-size:18px">—</div><div class="kpi-sub">disponível &gt; 0</div></div>
+        <div class="kpi-item" style="min-width:0;flex:1 1 100px"><div class="kpi-label">⭕ Zerados</div><div class="kpi-val" id="ckpi-zero" style="color:var(--red);font-size:18px">—</div><div class="kpi-sub">sem estoque</div></div>
+        <div class="kpi-item" style="min-width:0;flex:1 1 160px;border-right:none"><div class="kpi-label">💰 CMC Total</div><div class="kpi-val" id="ckpi-cmc" style="color:var(--yellow);font-size:13px;word-break:break-all">—</div><div class="kpi-sub">valor em estoque</div></div>
       </div>
 
       <!-- Toolbar -->
@@ -1002,23 +1045,33 @@ td:last-child { border-right: none; }
       </div>
 
       <!-- Table -->
-      <div class="table-wrap" style="flex:1;overflow:auto">
+      <div class="table-wrap" style="flex:1;overflow:auto;min-width:0;width:100%">
         <div class="empty-state" id="emptyCatalogo">
           <div class="empty-icon">🗂</div>
           <div class="empty-title">Catálogo vazio</div>
           <div class="empty-sub">Importe uma planilha de posição de estoque ou clique em "Sincronizar com Estoque" após carregar a análise.</div>
         </div>
         <table id="catTable" style="display:none">
+          <colgroup>
+            <col style="width:130px">
+            <col style="width:auto">
+            <col style="width:90px">
+            <col style="width:100px">
+            <col style="width:80px">
+            <col style="width:85px">
+            <col style="width:100px">
+            <col style="width:80px">
+          </colgroup>
           <thead>
             <tr>
               <th onclick="catSort('ean')">CÓDIGO / EAN ↕</th>
               <th onclick="catSort('desc')">DESCRIÇÃO ↕</th>
               <th onclick="catSort('ncm')">NCM ↕</th>
               <th onclick="catSort('marca')">MARCA ↕</th>
-              <th class="td-num" onclick="catSort('qtdTotal')">QTD TOTAL ↕</th>
-              <th class="td-num" onclick="catSort('disponivel')">DISPONÍVEL ↕</th>
-              <th class="td-num" onclick="catSort('cmcTotal')">CMC TOTAL ↕</th>
-              <th>SITUAÇÃO</th>
+              <th class="td-num" onclick="catSort('qtdTotal')">QTD ↕</th>
+              <th class="td-num" onclick="catSort('disponivel')">DISP ↕</th>
+              <th class="td-num" onclick="catSort('cmcTotal')">CMC ↕</th>
+              <th>STATUS</th>
             </tr>
           </thead>
           <tbody id="catTableBody"></tbody>
@@ -1151,6 +1204,9 @@ function switchView(v) {
   document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
   document.getElementById('tab-'+v).classList.add('active');
+  // Esconde sidebar nas views que têm painel lateral próprio
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) sidebar.style.display = ['analysis','requisicoes','fornecedores','nfe','produtos'].includes(v) && v!=='produtos' ? '' : 'none';
   if (v === 'requisicoes') renderReqList();
   if (v === 'fornecedores') renderFornecList();
   if (v === 'nfe') renderNfeHist();
@@ -2668,10 +2724,29 @@ async function toggleUsuario(email) {
   } catch(e) { toast('❌ '+e.message,'error'); }
 }
 
+// ── Theme Toggle ─────────────────────────────────────────────────
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  const btn = document.getElementById('themeToggle');
+  btn.textContent = isLight ? '☀️' : '🌙';
+  btn.title = isLight ? 'Modo escuro' : 'Modo claro';
+  localStorage.setItem('siq_theme', isLight ? 'light' : 'dark');
+}
+
+function applyTheme() {
+  const saved = localStorage.getItem('siq_theme');
+  if (saved === 'light') {
+    document.body.classList.add('light');
+    const btn = document.getElementById('themeToggle');
+    if (btn) { btn.textContent = '☀️'; btn.title = 'Modo escuro'; }
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════
 async function appInit() {
+  applyTheme();
   // Check session
   const token = sessionStorage.getItem('gapi_token');
   const userStr = sessionStorage.getItem('gapi_user');
