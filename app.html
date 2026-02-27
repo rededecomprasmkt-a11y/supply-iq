@@ -468,7 +468,9 @@ async function gasCall(action, extra={}){
 
 // ═══ GOOGLE DRIVE API ═══
 function isGasMode(){
-  return S.driveToken === 'gas_mode';
+  // Usa GAS sempre que a URL estiver configurada (dados compartilhados)
+  // Isso vale tanto para usuários de senha quanto para o admin via Google
+  return !!gasUrl();
 }
 
 function driveHeaders(){
@@ -491,6 +493,9 @@ async function driveInit(){
       document.getElementById('tab-usuarios').style.display='';
       document.getElementById('sb-usuarios').style.display='';
     }
+    // Garante que a URL do GAS está disponível na sessão
+    const savedGasUrl = localStorage.getItem('siq_gas_url');
+    if(savedGasUrl) sessionStorage.setItem('siq_gas_url', savedGasUrl);
   }catch(e){}
 
   setSyncDot('syncing');
