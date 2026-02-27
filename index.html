@@ -206,7 +206,7 @@ async function loginSenha(){
       name: u.nome||u.email, email: u.email, picture:'', role: u.role||'user'
     }));
     sessionStorage.setItem('siq_gas_url', gasUrl);
-    window.location.href='app.html';
+    window.location.href='supply_iq_pro.html';
   }catch(e){
     hideLoading();
     showError('Erro ao conectar com o backend: '+e.message+'. Verifique a URL do Apps Script.');
@@ -229,7 +229,7 @@ function salvarGasUrl(){
 let tokenClient;
 window.onload = function(){
   if(sessionStorage.getItem('gapi_token')&&sessionStorage.getItem('gapi_user')){
-    showLoading('Retomando sessão…');window.location.href='app.html';return;
+    showLoading('Retomando sessão…');window.location.href='supply_iq_pro.html';return;
   }
   // Mostra campo de URL se ainda não configurado
   if(!'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR-ACvly_bkHKyJNhGjheype-pnGkx2hn9alpRDtOnLNx5Ojvog/exec'){
@@ -261,7 +261,7 @@ async function handleToken(resp){
     sessionStorage.setItem('gapi_token',token);
     sessionStorage.setItem('gapi_user',JSON.stringify({name:'Admin',email:'',picture:'',role:'admin'}));
   }
-  showLoading('Entrando…');setTimeout(()=>{window.location.href='app.html';},500);
+  showLoading('Entrando…');setTimeout(()=>{window.location.href='supply_iq_pro.html';},500);
 }
 </script>
 </body>
