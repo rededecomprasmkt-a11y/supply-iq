@@ -2478,15 +2478,24 @@ function save(key) {
             }
           } catch(chunkErr) { usedChunk = false; }
           if (!usedChunk) {
-            // GAS antigo: saveCatalogo direto com dados comprimidos
-            // Limit: tenta até 500 itens (seguro para ~45KB)
-            const safe = mini.slice(0, 500);
-            const r2 = await gasCall('saveCatalogo', {data: safe});
-            if (!r2.ok) throw new Error('Erro ao salvar: ' + (r2.error||'?'));
-            if (total > 500) {
-              toast('⚠ GAS desatualizado: apenas 500/' + total + ' itens salvos. Atualize o script GAS para salvar tudo.', 'error');
-            } else {
-              toast('✅ Catálogo salvo (' + safe.length + ' itens)', 'success');
+            // GAS antigo: tentar saveCatalogo simples
+            const safe = mini.slice(0, 400);
+            try {
+              const r2 = await gasCall('saveCatalogo', {data: safe});
+              if (!r2.ok && (r2.error||'').includes('desconhecida')) {
+                // GAS muito antigo — não tem suporte a catálogo
+                // Salvar só localmente e avisar UMA VEZ
+                if (!window._gasOldWarned) {
+                  window._gasOldWarned = true;
+                  toast('⚠ Script GAS desatualizado — catálogo salvo apenas localmente. Atualize o GAS para sincronizar entre usuários.', '');
+                }
+              } else if (!r2.ok) {
+                toast('⚠ Catálogo salvo localmente (' + (r2.error||'erro GAS') + ')', '');
+              } else {
+                toast('✅ Catálogo salvo' + (total > 400 ? ' (parcial — atualize o GAS)' : ' (' + safe.length + ' itens)'), total > 400 ? '' : 'success');
+              }
+            } catch(e2) {
+              // Silencioso — catálogo fica no localStorage
             }
           } else {
             toast('✅ Catálogo salvo (' + total + ' itens)', 'success');
@@ -2500,7 +2509,13 @@ function save(key) {
     } catch(e) {
       console.error('Sync error:', e);
       setSyncDot('error');
-      toast('❌ Erro ao salvar: ' + e.message, 'error');
+      // Não mostrar erro vermelho para problemas conhecidos de compatibilidade
+      const msg = e.message || '';
+      if (msg.includes('desconhecida') || msg.includes('Chunk')) {
+        toast('⚠ Script GAS desatualizado — atualize o GAS para sincronizar o catálogo entre usuários.', '');
+      } else {
+        toast('❌ Erro ao salvar: ' + msg, 'error');
+      }
     }
   }, 1200);
 }
