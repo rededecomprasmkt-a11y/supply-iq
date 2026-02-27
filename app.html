@@ -219,8 +219,6 @@ body {
 /* ── VIEWS ── */
 .view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
 .view.active { display: flex; }
-/* Ensure all views with analysis-layout take full width */
-.view.active .analysis-layout { width: 100%; }
 
 /* ── ANALYSIS VIEW ── */
 .analysis-layout { display: flex; flex: 1; overflow: hidden; }
@@ -705,37 +703,6 @@ td:last-child { border-right: none; }
 .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.3); border-top-color: #000; border-radius: 50%; animation: sp 0.6s linear infinite; }
 @keyframes sp { to { transform: rotate(360deg); } }
 
-/* ── FORCE FULL WIDTH FOR ALL VIEWS EXCEPT ANALYSIS ── */
-#view-produtos.active,
-#view-requisicoes.active,
-#view-fornecedores.active,
-#view-nfe.active,
-#view-usuarios.active {
-  width: 100%;
-  flex: 1;
-}
-
-/* When not in analysis view, ensure layout fills completely */
-body:not(.view-analysis) .layout { width: 100%; }
-
-/* ── TODAS AS VIEWS (exceto análise): posição fixa, tela cheia ── */
-#view-requisicoes.active,
-#view-fornecedores.active,
-#view-nfe.active,
-#view-produtos.active,
-#view-usuarios.active {
-  position: fixed !important;
-  top: var(--header) !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100vw !important;
-  height: calc(100vh - var(--header)) !important;
-  z-index: 10;
-  display: flex !important;
-  flex-direction: column;
-  overflow: hidden;
-}
 </style>
 </head>
 <body>
@@ -937,216 +904,21 @@ body:not(.view-analysis) .layout { width: 100%; }
 </div>
 
 <!-- ═══ REQUISIÇÕES VIEW ═══ -->
-<div class="view" id="view-requisicoes" style="display:none;">
-  <div class="req-layout">
 
-    <div class="req-left">
-      <div class="panel-head">🛒 Requisições de Compra
-        <span style="margin-left:auto;font-size:10px;color:var(--text3)" id="req-count-label">0 req.</span>
-      </div>
-      <div class="req-list" id="reqList">
-        <div class="empty-state" style="padding:32px 16px">
-          <div class="empty-icon">🛒</div>
-          <div class="empty-title" style="font-size:13px">Nenhuma requisição</div>
-          <div class="empty-sub">Selecione itens na análise e clique em "Adicionar à Requisição".</div>
-        </div>
-      </div>
-      <div style="padding:10px 8px; border-top:1px solid var(--border); display:flex; gap:6px;">
-        <button class="btn btn-ghost" style="flex:1;font-size:11px" onclick="newReq()">＋ Nova Requisição</button>
-      </div>
-    </div>
-
-    <div class="req-right" id="reqRight">
-      <div class="empty-state">
-        <div class="empty-icon">📋</div>
-        <div class="empty-title">Selecione ou crie uma requisição</div>
-        <div class="empty-sub">Cada requisição gera um arquivo .xlsx pronto para importar no Omie.</div>
-      </div>
-    </div>
-
-  </div>
-</div>
 
 <!-- ═══ FORNECEDORES VIEW ═══ -->
-<div class="view" id="view-fornecedores" style="display:none;">
-  <div class="fornec-layout">
 
-    <div class="fornec-left">
-      <div class="panel-head">🏢 Fornecedores Cadastrados</div>
-      <div class="fornec-list" id="fornecList">
-        <div class="empty-state" style="padding:32px 16px">
-          <div class="empty-icon">🏢</div>
-          <div class="empty-sub">Nenhum fornecedor ainda. Clique em "Novo Fornecedor".</div>
-        </div>
-      </div>
-      <div style="padding:10px 8px; border-top:1px solid var(--border);">
-        <button class="btn btn-blue" style="width:100%" onclick="newFornec()">＋ Novo Fornecedor</button>
-      </div>
-    </div>
-
-    <div class="fornec-right" id="fornecRight">
-      <div class="empty-state">
-        <div class="empty-icon">🏢</div>
-        <div class="empty-title">Cadastro de Fornecedores</div>
-        <div class="empty-sub">Aqui você cadastra fornecedores com os dados obrigatórios para gerar requisições Omie: Razão Social, Categoria de Compra, Número de Parcelas, Conta Corrente e Previsão de Entrega padrão.</div>
-      </div>
-    </div>
-
-  </div>
-</div>
 
 <!-- ═══ NF-e VIEW ═══ -->
-<div class="view" id="view-nfe" style="display:none;">
-  <div class="nfe-layout">
 
-    <!-- Left: drop + histórico -->
-    <div class="nfe-left">
-      <div class="panel-head">📄 Importar NF-e XML</div>
-
-      <div class="nfe-drop-zone" id="nfeDrop"
-        ondragover="event.preventDefault();this.classList.add('drag')"
-        ondragleave="this.classList.remove('drag')"
-        ondrop="nfeDrop(event)">
-        <input type="file" accept=".xml" multiple onchange="nfeLoadFiles(this.files)">
-        <div class="nfe-drop-icon">🗂️</div>
-        <div class="nfe-drop-title">Arraste os XMLs aqui</div>
-        <div class="nfe-drop-sub">NF-e de fornecedores · pode importar vários de uma vez</div>
-      </div>
-
-      <div class="panel-head" style="border-top:1px solid var(--border);margin-top:0">
-        📋 Notas Importadas
-        <span style="margin-left:auto;font-size:10px;color:#8fa8cc" id="nfe-hist-count">0</span>
-      </div>
-      <div class="nfe-hist" id="nfeHist">
-        <div class="empty-state" style="padding:24px 16px">
-          <div class="empty-icon" style="font-size:32px">📄</div>
-          <div class="empty-sub">Nenhuma NF-e importada ainda.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Right: preview da NF selecionada -->
-    <div class="nfe-right" id="nfeRight">
-      <div class="empty-state">
-        <div class="empty-icon">📄</div>
-        <div class="empty-title">Selecione uma NF-e</div>
-        <div class="empty-sub">Importe um XML de NF-e para visualizar fornecedor, itens e custos unitários. Você poderá então cadastrar o fornecedor e atualizar os preços automaticamente.</div>
-      </div>
-    </div>
-
-  </div>
-</div>
 
 </div><!-- NF-e view end -->
 
 <!-- ═══ CATÁLOGO DE PRODUTOS VIEW ═══ -->
-<div class="view" id="view-produtos" style="display:none;">
-  <div class="analysis-layout">
 
-    <!-- Left Panel -->
-    <div class="analysis-left" style="width:240px">
-      <div class="panel-head" style="color:#00bcd4">🗂 Catálogo de Produtos</div>
-
-      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
-        <div class="param-label" style="margin-bottom:6px">Sincronizar</div>
-        <div style="font-size:11px;color:#8fa8cc;line-height:1.5;font-family:var(--mono);margin-bottom:8px">
-          Importa todos os SKUs carregados na Análise de Compras.
-        </div>
-        <button class="btn" style="background:#00bcd4;color:#000;font-weight:800;width:100%;justify-content:center;font-size:12px" onclick="sincronizarCatalogo()">
-          🔄 Sincronizar com Estoque
-        </button>
-      </div>
-
-      <div class="upload-area" id="ua-catalogo" style="border-color:rgba(0,188,212,0.4)"
-        ondragover="drag(event,'ua-catalogo')" ondragleave="undrag('ua-catalogo')"
-        ondrop="dropCatalogo(event)">
-        <input type="file" accept=".xlsx,.xls" onchange="loadCatalogo(this)">
-        <div class="upload-icon">📂</div>
-        <div class="upload-label" style="color:#00bcd4">Importar XLSX</div>
-        <div class="upload-title">Posição de Estoque</div>
-        <div class="upload-desc">Formato Omie ou Pivot · Código, Descrição, Marca, Qtd</div>
-        <div class="upload-status" id="us-catalogo">Clique ou arraste aqui</div>
-      </div>
-
-      <div class="filter-block" style="border-bottom:none;flex:1;overflow:hidden;display:flex;flex-direction:column">
-        <div class="param-label" style="margin-bottom:6px">Marca</div>
-        <div class="marca-list" id="prodMarcaList" style="flex:1;overflow-y:auto"></div>
-      </div>
-    </div>
-
-    <!-- Right Panel -->
-    <div class="analysis-right">
-
-      <!-- KPI strip -->
-      <div class="kpi-strip" style="flex-wrap:wrap;min-height:unset">
-        <div class="kpi-item" style="min-width:0;flex:1 1 100px"><div class="kpi-label">📦 Total SKUs</div><div class="kpi-val" id="ckpi-total" style="color:#00bcd4;font-size:18px">—</div><div class="kpi-sub">no catálogo</div></div>
-        <div class="kpi-item" style="min-width:0;flex:1 1 100px"><div class="kpi-label">🏷️ Marcas</div><div class="kpi-val" id="ckpi-marcas" style="color:var(--accent2);font-size:18px">—</div><div class="kpi-sub">distintas</div></div>
-        <div class="kpi-item" style="min-width:0;flex:1 1 100px"><div class="kpi-label">✅ Com Estoque</div><div class="kpi-val" id="ckpi-stock" style="color:var(--accent);font-size:18px">—</div><div class="kpi-sub">disponível &gt; 0</div></div>
-        <div class="kpi-item" style="min-width:0;flex:1 1 100px"><div class="kpi-label">⭕ Zerados</div><div class="kpi-val" id="ckpi-zero" style="color:var(--red);font-size:18px">—</div><div class="kpi-sub">sem estoque</div></div>
-        <div class="kpi-item" style="min-width:0;flex:1 1 160px;border-right:none"><div class="kpi-label">💰 CMC Total</div><div class="kpi-val" id="ckpi-cmc" style="color:var(--yellow);font-size:13px;word-break:break-all">—</div><div class="kpi-sub">valor em estoque</div></div>
-      </div>
-
-      <!-- Toolbar -->
-      <div class="toolbar">
-        <input class="search-input" type="text" id="catSearchBox" placeholder="🔍  Buscar código, descrição, marca ou NCM…" oninput="renderCatalogo()">
-        <button class="btn btn-ghost" onclick="exportCatalogo()" style="font-size:11px">📥 Exportar XLSX</button>
-        <button class="btn btn-red" onclick="limparCatalogo()" style="font-size:11px">🗑 Limpar</button>
-        <span class="toolbar-info" id="catToolbarInfo">0 produtos</span>
-      </div>
-
-      <!-- Table -->
-      <div class="table-wrap" style="flex:1;overflow:auto;min-width:0;width:100%">
-        <div class="empty-state" id="emptyCatalogo">
-          <div class="empty-icon">🗂</div>
-          <div class="empty-title">Catálogo vazio</div>
-          <div class="empty-sub">Importe uma planilha de posição de estoque ou clique em "Sincronizar com Estoque" após carregar a análise.</div>
-        </div>
-        <table id="catTable" style="display:none">
-          <colgroup>
-            <col style="width:130px">
-            <col style="width:auto">
-            <col style="width:90px">
-            <col style="width:100px">
-            <col style="width:80px">
-            <col style="width:85px">
-            <col style="width:100px">
-            <col style="width:80px">
-          </colgroup>
-          <thead>
-            <tr>
-              <th onclick="catSort('ean')">CÓDIGO / EAN ↕</th>
-              <th onclick="catSort('desc')">DESCRIÇÃO ↕</th>
-              <th onclick="catSort('ncm')">NCM ↕</th>
-              <th onclick="catSort('marca')">MARCA ↕</th>
-              <th class="td-num" onclick="catSort('qtdTotal')">QTD ↕</th>
-              <th class="td-num" onclick="catSort('disponivel')">DISP ↕</th>
-              <th class="td-num" onclick="catSort('cmcTotal')">CMC ↕</th>
-              <th>STATUS</th>
-            </tr>
-          </thead>
-          <tbody id="catTableBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-  </div>
-</div>
 
 <!-- ═══ USUÁRIOS VIEW ═══ -->
-<div class="view" id="view-usuarios" style="display:none;">
-  <div style="flex:1;overflow-y:auto;padding:28px 32px;max-width:700px;margin:0 auto;width:100%">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
-      <div>
-        <div style="font-size:20px;font-weight:800">👥 Gerenciar Usuários</div>
-        <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-top:3px">Usuários com acesso via email/senha</div>
-      </div>
-      <button class="btn btn-primary" onclick="abrirModalNovoUsuario()">＋ Novo Usuário</button>
-    </div>
-    <div id="usuariosList" style="display:flex;flex-direction:column;gap:10px">
-      <div style="text-align:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:12px">⏳ Carregando…</div>
-    </div>
-  </div>
-</div>
+
 
 </div><!-- .main -->
 </div><!-- .layout -->
@@ -1249,12 +1021,11 @@ const Z_MAP = { 0.80:0.842, 0.85:1.036, 0.90:1.282, 0.95:1.645, 0.99:2.326 };
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════════
 function switchView(v) {
-  document.querySelectorAll('.view').forEach(el => { el.classList.remove('active'); el.style.display = ''; });
+  document.querySelectorAll('.view').forEach(el => { el.classList.remove('active'); el.style.display = 'none'; });
   document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
   const activeView = document.getElementById('view-'+v);
   activeView.classList.add('active');
-  // Override inline display:none for fixed-position views
   activeView.style.display = 'flex';
   if (document.getElementById('tab-'+v)) document.getElementById('tab-'+v).classList.add('active');
   // Sidebar só aparece na view de análise (tem painel lateral próprio)
@@ -2867,5 +2638,208 @@ async function appInit() {
 
 appInit();
 </script>
+
+<!-- ── VIEWS FORA DO LAYOUT (posição fixa, tela cheia) ── -->
+<div class="view" id="view-requisicoes" style="display:none;position:fixed;top:var(--header,52px);left:0;right:0;bottom:0;width:100vw;height:calc(100vh - var(--header,52px));z-index:10;flex-direction:column;overflow:hidden;">
+  <div class="req-layout">
+
+    <div class="req-left">
+      <div class="panel-head">🛒 Requisições de Compra
+        <span style="margin-left:auto;font-size:10px;color:var(--text3)" id="req-count-label">0 req.</span>
+      </div>
+      <div class="req-list" id="reqList">
+        <div class="empty-state" style="padding:32px 16px">
+          <div class="empty-icon">🛒</div>
+          <div class="empty-title" style="font-size:13px">Nenhuma requisição</div>
+          <div class="empty-sub">Selecione itens na análise e clique em "Adicionar à Requisição".</div>
+        </div>
+      </div>
+      <div style="padding:10px 8px; border-top:1px solid var(--border); display:flex; gap:6px;">
+        <button class="btn btn-ghost" style="flex:1;font-size:11px" onclick="newReq()">＋ Nova Requisição</button>
+      </div>
+    </div>
+
+    <div class="req-right" id="reqRight">
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">Selecione ou crie uma requisição</div>
+        <div class="empty-sub">Cada requisição gera um arquivo .xlsx pronto para importar no Omie.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div class="view" id="view-fornecedores" style="display:none;position:fixed;top:var(--header,52px);left:0;right:0;bottom:0;width:100vw;height:calc(100vh - var(--header,52px));z-index:10;flex-direction:column;overflow:hidden;">
+  <div class="fornec-layout">
+
+    <div class="fornec-left">
+      <div class="panel-head">🏢 Fornecedores Cadastrados</div>
+      <div class="fornec-list" id="fornecList">
+        <div class="empty-state" style="padding:32px 16px">
+          <div class="empty-icon">🏢</div>
+          <div class="empty-sub">Nenhum fornecedor ainda. Clique em "Novo Fornecedor".</div>
+        </div>
+      </div>
+      <div style="padding:10px 8px; border-top:1px solid var(--border);">
+        <button class="btn btn-blue" style="width:100%" onclick="newFornec()">＋ Novo Fornecedor</button>
+      </div>
+    </div>
+
+    <div class="fornec-right" id="fornecRight">
+      <div class="empty-state">
+        <div class="empty-icon">🏢</div>
+        <div class="empty-title">Cadastro de Fornecedores</div>
+        <div class="empty-sub">Aqui você cadastra fornecedores com os dados obrigatórios para gerar requisições Omie: Razão Social, Categoria de Compra, Número de Parcelas, Conta Corrente e Previsão de Entrega padrão.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div class="view" id="view-nfe" style="display:none;position:fixed;top:var(--header,52px);left:0;right:0;bottom:0;width:100vw;height:calc(100vh - var(--header,52px));z-index:10;flex-direction:column;overflow:hidden;">
+  <div class="nfe-layout">
+
+    <!-- Left: drop + histórico -->
+    <div class="nfe-left">
+      <div class="panel-head">📄 Importar NF-e XML</div>
+
+      <div class="nfe-drop-zone" id="nfeDrop"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="nfeDrop(event)">
+        <input type="file" accept=".xml" multiple onchange="nfeLoadFiles(this.files)">
+        <div class="nfe-drop-icon">🗂️</div>
+        <div class="nfe-drop-title">Arraste os XMLs aqui</div>
+        <div class="nfe-drop-sub">NF-e de fornecedores · pode importar vários de uma vez</div>
+      </div>
+
+      <div class="panel-head" style="border-top:1px solid var(--border);margin-top:0">
+        📋 Notas Importadas
+        <span style="margin-left:auto;font-size:10px;color:#8fa8cc" id="nfe-hist-count">0</span>
+      </div>
+      <div class="nfe-hist" id="nfeHist">
+        <div class="empty-state" style="padding:24px 16px">
+          <div class="empty-icon" style="font-size:32px">📄</div>
+          <div class="empty-sub">Nenhuma NF-e importada ainda.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: preview da NF selecionada -->
+    <div class="nfe-right" id="nfeRight">
+      <div class="empty-state">
+        <div class="empty-icon">📄</div>
+        <div class="empty-title">Selecione uma NF-e</div>
+        <div class="empty-sub">Importe um XML de NF-e para visualizar fornecedor, itens e custos unitários. Você poderá então cadastrar o fornecedor e atualizar os preços automaticamente.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div class="view" id="view-produtos" style="display:none;position:fixed;top:var(--header,52px);left:0;right:0;bottom:0;width:100vw;height:calc(100vh - var(--header,52px));z-index:10;flex-direction:column;overflow:hidden;">
+  <div class="analysis-layout">
+
+    <!-- Left Panel -->
+    <div class="analysis-left" style="width:240px">
+      <div class="panel-head" style="color:#00bcd4">🗂 Catálogo de Produtos</div>
+
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div class="param-label" style="margin-bottom:6px">Sincronizar</div>
+        <div style="font-size:11px;color:#8fa8cc;line-height:1.5;font-family:var(--mono);margin-bottom:8px">
+          Importa todos os SKUs carregados na Análise de Compras.
+        </div>
+        <button class="btn" style="background:#00bcd4;color:#000;font-weight:800;width:100%;justify-content:center;font-size:12px" onclick="sincronizarCatalogo()">
+          🔄 Sincronizar com Estoque
+        </button>
+      </div>
+
+      <div class="upload-area" id="ua-catalogo" style="border-color:rgba(0,188,212,0.4)"
+        ondragover="drag(event,'ua-catalogo')" ondragleave="undrag('ua-catalogo')"
+        ondrop="dropCatalogo(event)">
+        <input type="file" accept=".xlsx,.xls" onchange="loadCatalogo(this)">
+        <div class="upload-icon">📂</div>
+        <div class="upload-label" style="color:#00bcd4">Importar XLSX</div>
+        <div class="upload-title">Posição de Estoque</div>
+        <div class="upload-desc">Formato Omie ou Pivot · Código, Descrição, Marca, Qtd</div>
+        <div class="upload-status" id="us-catalogo">Clique ou arraste aqui</div>
+      </div>
+
+      <div class="filter-block" style="border-bottom:none;flex:1;overflow:hidden;display:flex;flex-direction:column">
+        <div class="param-label" style="margin-bottom:6px">Marca</div>
+        <div class="marca-list" id="prodMarcaList" style="flex:1;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="analysis-right">
+
+      <!-- KPI strip -->
+      <div class="kpi-strip" style="flex-wrap:wrap;min-height:unset">
+        <div class="kpi-item" style="min-width:0;flex:1 1 100px"><div class="kpi-label">📦 Total SKUs</div><div class="kpi-val" id="ckpi-total" style="color:#00bcd4;font-size:18px">—</div><div class="kpi-sub">no catálogo</div></div>
+        <div class="kpi-item" style="min-width:0;flex:1 1 100px"><div class="kpi-label">🏷️ Marcas</div><div class="kpi-val" id="ckpi-marcas" style="color:var(--accent2);font-size:18px">—</div><div class="kpi-sub">distintas</div></div>
+        <div class="kpi-item" style="min-width:0;flex:1 1 100px"><div class="kpi-label">✅ Com Estoque</div><div class="kpi-val" id="ckpi-stock" style="color:var(--accent);font-size:18px">—</div><div class="kpi-sub">disponível &gt; 0</div></div>
+        <div class="kpi-item" style="min-width:0;flex:1 1 100px"><div class="kpi-label">⭕ Zerados</div><div class="kpi-val" id="ckpi-zero" style="color:var(--red);font-size:18px">—</div><div class="kpi-sub">sem estoque</div></div>
+        <div class="kpi-item" style="min-width:0;flex:1 1 160px;border-right:none"><div class="kpi-label">💰 CMC Total</div><div class="kpi-val" id="ckpi-cmc" style="color:var(--yellow);font-size:13px;word-break:break-all">—</div><div class="kpi-sub">valor em estoque</div></div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <input class="search-input" type="text" id="catSearchBox" placeholder="🔍  Buscar código, descrição, marca ou NCM…" oninput="renderCatalogo()">
+        <button class="btn btn-ghost" onclick="exportCatalogo()" style="font-size:11px">📥 Exportar XLSX</button>
+        <button class="btn btn-red" onclick="limparCatalogo()" style="font-size:11px">🗑 Limpar</button>
+        <span class="toolbar-info" id="catToolbarInfo">0 produtos</span>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap" style="flex:1;overflow:auto;min-width:0;width:100%">
+        <div class="empty-state" id="emptyCatalogo">
+          <div class="empty-icon">🗂</div>
+          <div class="empty-title">Catálogo vazio</div>
+          <div class="empty-sub">Importe uma planilha de posição de estoque ou clique em "Sincronizar com Estoque" após carregar a análise.</div>
+        </div>
+        <table id="catTable" style="display:none">
+          <colgroup>
+            <col style="width:130px">
+            <col style="width:auto">
+            <col style="width:90px">
+            <col style="width:100px">
+            <col style="width:80px">
+            <col style="width:85px">
+            <col style="width:100px">
+            <col style="width:80px">
+          </colgroup>
+          <thead>
+            <tr>
+              <th onclick="catSort('ean')">CÓDIGO / EAN ↕</th>
+              <th onclick="catSort('desc')">DESCRIÇÃO ↕</th>
+              <th onclick="catSort('ncm')">NCM ↕</th>
+              <th onclick="catSort('marca')">MARCA ↕</th>
+              <th class="td-num" onclick="catSort('qtdTotal')">QTD ↕</th>
+              <th class="td-num" onclick="catSort('disponivel')">DISP ↕</th>
+              <th class="td-num" onclick="catSort('cmcTotal')">CMC ↕</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody id="catTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div class="view" id="view-usuarios" style="display:none;position:fixed;top:var(--header,52px);left:0;right:0;bottom:0;width:100vw;height:calc(100vh - var(--header,52px));z-index:10;flex-direction:column;overflow:hidden;">
+  <div style="flex:1;overflow-y:auto;padding:28px 32px;max-width:700px;margin:0 auto;width:100%">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div style="font-size:20px;font-weight:800">👥 Gerenciar Usuários</div>
+        <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-top:3px">Usuários com acesso via email/senha</div>
+      </div>
+      <button class="btn btn-primary" onclick="abrirModalNovoUsuario()">＋ Novo Usuário</button>
+    </div>
+    <div id="usuariosList" style="display:flex;flex-direction:column;gap:10px">
+      <div style="text-align:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:12px">⏳ Carregando…</div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
