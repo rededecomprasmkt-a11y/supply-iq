@@ -1,0 +1,2447 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supply IQ Pro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --bg: #0e1117;
+  --bg2: #131820;
+  --panel: #161d28;
+  --panel2: #1c2535;
+  --border: #1f2d42;
+  --border2: #263650;
+  --accent: #00e676;
+  --accent-dim: rgba(0,230,118,0.12);
+  --accent2: #2979ff;
+  --accent2-dim: rgba(41,121,255,0.12);
+  --orange: #ff6d00;
+  --orange-dim: rgba(255,109,0,0.12);
+  --red: #ff1744;
+  --red-dim: rgba(255,23,68,0.12);
+  --yellow: #ffd600;
+  --yellow-dim: rgba(255,214,0,0.1);
+  --text: #f0f4ff;
+  --text2: #b0c4e0;
+  --text3: #6b82a6;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Outfit', sans-serif;
+  --sidebar: 220px;
+  --header: 52px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ── */
+.header {
+  height: var(--header);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  flex-shrink: 0;
+  z-index: 50;
+}
+.header-logo {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 16px; font-weight: 800;
+  letter-spacing: -0.3px;
+}
+.header-logo .dot { color: var(--accent); }
+.logo-badge {
+  background: var(--accent);
+  color: #000;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+.header-sep { flex: 1; }
+.nav-tabs {
+  display: flex;
+  gap: 4px;
+}
+.nav-tab {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--text2);
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  transition: all 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.nav-tab:hover { border-color: var(--border2); color: var(--text); }
+.nav-tab.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.nav-tab.tab-orange.active { background: var(--orange-dim); border-color: var(--orange); color: var(--orange); }
+.nav-tab.tab-purple.active { background: rgba(156,39,176,0.15); border-color: #ce93d8; color: #ce93d8; }
+.nav-tab.tab-blue.active { background: var(--accent2-dim); border-color: var(--accent2); color: var(--accent2); }
+.nav-tab.tab-teal.active { background: rgba(0,188,212,0.12); border-color: #00bcd4; color: #00bcd4; }
+
+/* ── LAYOUT ── */
+.layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: var(--sidebar);
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+.sidebar-section {
+  padding: 14px 12px 6px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: #8fa8cc;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.sidebar-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text2);
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+}
+.sidebar-item:hover { background: var(--panel); color: var(--text); }
+.sidebar-item.active { background: var(--accent-dim); border-left-color: var(--accent); color: var(--accent); }
+.sidebar-item .icon { font-size: 14px; width: 18px; text-align: center; }
+.sidebar-item .badge {
+  margin-left: auto;
+  background: var(--red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-family: var(--mono);
+}
+.sidebar-item .badge.green { background: var(--accent); color: #000; }
+
+/* ── MAIN ── */
+.main {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── VIEWS ── */
+.view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+.view.active { display: flex; }
+
+/* ── ANALYSIS VIEW ── */
+.analysis-layout { display: flex; flex: 1; overflow: hidden; }
+
+/* Análise - left panel (filters/upload) */
+.analysis-left {
+  width: 300px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+.panel-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  color: #c8daee;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* Upload areas */
+.upload-area {
+  margin: 12px;
+  border: 1px dashed var(--border2);
+  border-radius: 10px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  text-align: center;
+}
+.upload-area:hover, .upload-area.drag { border-color: var(--accent); background: var(--accent-dim); }
+.upload-area.loaded { border-style: solid; border-color: var(--accent); background: var(--accent-dim); }
+.upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.upload-icon { font-size: 20px; margin-bottom: 6px; }
+.upload-label { font-family: var(--mono); font-size: 9px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin-bottom: 4px; }
+.upload-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.upload-desc { font-size: 11px; color: #b0c4e0; line-height: 1.4; }
+.upload-status { font-family: var(--mono); font-size: 10px; color: #8fa8cc; margin-top: 8px; }
+.upload-status.ok { color: var(--accent); }
+
+/* Params */
+.param-block { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.param-label { font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px; color: #8fa8cc; text-transform: uppercase; margin-bottom: 6px; }
+.param-input, .param-select {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.param-input:focus, .param-select:focus { border-color: var(--accent); }
+
+/* Filter buttons */
+.filter-block { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.filter-chips { display: flex; flex-direction: column; gap: 4px; }
+.fchip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text2);
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.fchip:hover { border-color: var(--border2); color: var(--text); }
+.fchip.active-all { border-color: var(--text2); color: var(--text); background: rgba(255,255,255,0.05); }
+.fchip.active-crit { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+.fchip.active-warn { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); }
+.fchip.active-ok { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.fchip.active-sem { border-color: var(--text3); color: var(--text3); background: rgba(255,255,255,0.02); }
+.fchip-count { margin-left: auto; font-family: var(--mono); font-size: 10px; }
+.fdot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+/* Marca list */
+.marca-list { padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; }
+.marca-item {
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text2);
+  display: flex; align-items: center; justify-content: space-between;
+  transition: background 0.1s;
+}
+.marca-item:hover { background: var(--panel); }
+.marca-item.active { background: var(--accent-dim); color: var(--accent); }
+.marca-count { font-size: 9px; color: var(--text3); }
+.marca-item.active .marca-count { color: var(--accent); }
+
+/* Run button */
+.btn-run {
+  margin: 12px 16px;
+  width: calc(100% - 32px);
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: #000;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-run:hover { background: #33eb91; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,230,118,0.25); }
+.btn-run:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ── RIGHT PANEL: table ── */
+.analysis-right { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+.toolbar {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg2);
+}
+.search-input {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 7px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+  min-width: 0;
+}
+.search-input:focus { border-color: var(--accent2); }
+.toolbar-info { font-family: var(--mono); font-size: 10px; color: #8fa8cc; white-space: nowrap; }
+
+.kpi-strip {
+  display: flex;
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  flex-shrink: 0;
+}
+.kpi-item {
+  flex: 1;
+  padding: 10px 16px;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.kpi-item:last-child { border-right: none; }
+.kpi-label { font-family: var(--mono); font-size: 9px; color: #8fa8cc; letter-spacing: 1px; text-transform: uppercase; }
+.kpi-val { font-size: 20px; font-weight: 800; line-height: 1; }
+.kpi-sub { font-family: var(--mono); font-size: 9px; color: #8fa8cc; }
+
+.table-wrap { flex: 1; overflow: auto; }
+
+table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+thead { position: sticky; top: 0; z-index: 10; }
+thead th {
+  background: var(--panel2);
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  color: #8fa8cc;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 9px 12px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+thead th:hover { color: #c8daee; }
+thead th.sorted { color: var(--accent); }
+thead th:last-child { border-right: none; }
+tbody tr { border-bottom: 1px solid rgba(31,45,66,0.6); transition: background 0.08s; }
+tbody tr:hover { background: rgba(255,255,255,0.02); }
+td { padding: 9px 12px; border-right: 1px solid rgba(31,45,66,0.4); vertical-align: middle; }
+td:last-child { border-right: none; }
+
+.td-ean { font-family: var(--mono); font-size: 10px; color: #8fa8cc; white-space: nowrap; }
+.td-desc { font-size: 12px; font-weight: 500; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.td-marca { white-space: nowrap; }
+.marca-tag {
+  font-family: var(--mono); font-size: 9px; font-weight: 600;
+  padding: 2px 8px; border-radius: 4px;
+  background: var(--accent2-dim); color: var(--accent2);
+  border: 1px solid rgba(41,121,255,0.2);
+  display: inline-block;
+}
+.td-num { text-align: right; font-family: var(--mono); font-size: 11px; white-space: nowrap; }
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  border-radius: 5px; font-size: 9px; font-family: var(--mono);
+  font-weight: 600; padding: 3px 8px; letter-spacing: 0.5px;
+  border: 1px solid; white-space: nowrap;
+}
+.b-ok   { background: var(--accent-dim); color: var(--accent); border-color: rgba(0,230,118,0.3); }
+.b-warn { background: var(--orange-dim); color: var(--orange); border-color: rgba(255,109,0,0.3); }
+.b-crit { background: var(--red-dim);    color: var(--red);    border-color: rgba(255,23,68,0.3); }
+.b-sem  { background: rgba(61,80,112,0.15); color: var(--text3); border-color: rgba(61,80,112,0.3); }
+.bd { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.bd-pulse { animation: p 1.8s infinite; }
+@keyframes p { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+.sug-val { font-family: var(--mono); font-size: 12px; font-weight: 700; }
+.sug-crit { color: var(--red); }
+.sug-warn { color: var(--orange); }
+.sug-ok   { color: #b0c4e0; }
+.sug-zero { color: #6b82a6; }
+
+/* checkbox col */
+.td-check { width: 36px; text-align: center; padding: 6px; }
+.chk {
+  width: 14px; height: 14px; cursor: pointer; accent-color: var(--accent);
+  border-radius: 3px;
+}
+
+/* ── REQUISIÇÕES VIEW ── */
+.req-layout { display: flex; flex: 1; overflow: hidden; }
+.req-left {
+  width: 320px;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  background: var(--bg2);
+  flex-shrink: 0;
+}
+.req-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.req-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.req-card:hover { border-color: var(--border2); }
+.req-card.active { border-color: var(--orange); background: var(--orange-dim); }
+.req-card-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.req-card-sub { font-family: var(--mono); font-size: 10px; color: #b0c4e0; }
+.req-card-meta { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.req-tag {
+  font-family: var(--mono); font-size: 9px; padding: 2px 7px;
+  border-radius: 4px; background: var(--panel2); border: 1px solid var(--border2);
+  color: #b0c4e0;
+}
+
+.req-right { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.req-form { flex: 1; overflow-y: auto; padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+.form-section { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: visible; }
+.form-section-head {
+  padding: 12px 16px;
+  background: var(--panel2);
+  border-bottom: 1px solid var(--border);
+  border-radius: 10px 10px 0 0;
+  font-size: 11px; font-weight: 700;
+  color: #c8daee; letter-spacing: 1px; text-transform: uppercase;
+  display: flex; align-items: center; gap: 8px;
+}
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 16px; }
+.form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.form-field.full { grid-column: 1/-1; }
+.field-label { font-family: var(--mono); font-size: 9px; color: #8fa8cc; letter-spacing: 1.5px; text-transform: uppercase; }
+.field-required::after { content: ' *'; color: var(--red); }
+.field-input, .field-select, .field-textarea {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.field-input:focus, .field-select:focus, .field-textarea:focus { border-color: var(--orange); }
+.field-textarea { resize: vertical; min-height: 60px; }
+
+/* Items table inside req */
+.items-table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
+.items-table th { background: var(--bg); padding: 8px 10px; text-align: left; font-family: var(--mono); font-size: 9px; color: #8fa8cc; letter-spacing: 1px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.items-table td { padding: 7px 8px; border-bottom: 1px solid rgba(31,45,66,0.5); vertical-align: middle; }
+.items-table tr:last-child td { border-bottom: none; }
+.items-table .field-input { padding: 5px 8px; font-size: 11px; }
+
+.req-footer {
+  padding: 14px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex; align-items: center; gap: 10px;
+}
+.btn {
+  border: none; border-radius: 7px; cursor: pointer; font-family: var(--sans);
+  font-size: 12px; font-weight: 700; padding: 9px 18px; transition: all 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-ghost { background: var(--panel); color: var(--text2); border: 1px solid var(--border); }
+.btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+.btn-primary { background: var(--accent); color: #000; }
+.btn-primary:hover { background: #33eb91; box-shadow: 0 4px 16px rgba(0,230,118,0.2); }
+.btn-orange { background: var(--orange); color: #fff; }
+.btn-orange:hover { background: #ff8c00; box-shadow: 0 4px 16px rgba(255,109,0,0.25); }
+.btn-blue { background: var(--accent2); color: #fff; }
+.btn-blue:hover { background: #448aff; box-shadow: 0 4px 16px rgba(41,121,255,0.25); }
+.btn-red { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,23,68,0.3); }
+.btn-red:hover { background: var(--red); color: #fff; }
+
+/* ── FORNECEDORES VIEW ── */
+.fornec-layout { display: flex; flex: 1; overflow: hidden; }
+.fornec-left {
+  width: 300px;
+  border-right: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex; flex-direction: column;
+}
+.fornec-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.fornec-item {
+  padding: 10px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.fornec-item:hover { border-color: var(--border2); }
+.fornec-item.active { border-color: var(--accent2); background: var(--accent2-dim); }
+.fornec-name { font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+.fornec-cnpj { font-family: var(--mono); font-size: 10px; color: #b0c4e0; }
+.fornec-marcas { font-size: 10px; color: #8fa8cc; margin-top: 4px; }
+
+.fornec-right { flex: 1; overflow-y: auto; padding: 24px; }
+.fornec-form { max-width: 640px; display: flex; flex-direction: column; gap: 20px; }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 14px; padding: 48px; text-align: center;
+}
+.empty-icon { font-size: 48px; opacity: 0.2; }
+.empty-title { font-size: 16px; font-weight: 700; color: #b0c4e0; }
+.empty-sub { font-size: 12px; color: #8fa8cc; font-family: var(--mono); max-width: 380px; line-height: 1.7; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--panel2); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 12px 18px;
+  font-size: 13px; font-weight: 500;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  z-index: 999; transform: translateY(80px); opacity: 0;
+  transition: all 0.3s; display: flex; align-items: center; gap: 10px;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: var(--accent); }
+.toast.error { border-color: var(--red); }
+
+/* ── NF-e VIEW ── */
+.nfe-layout { display: flex; flex: 1; overflow: hidden; }
+.nfe-left {
+  width: 340px; flex-shrink: 0;
+  background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.nfe-drop-zone {
+  margin: 16px;
+  border: 2px dashed #ce93d8;
+  border-radius: 12px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  background: rgba(156,39,176,0.05);
+}
+.nfe-drop-zone:hover, .nfe-drop-zone.drag {
+  background: rgba(156,39,176,0.12);
+  border-color: #e040fb;
+}
+.nfe-drop-zone.loaded { border-color: var(--accent); background: var(--accent-dim); }
+.nfe-drop-zone input { position: absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.nfe-drop-icon { font-size: 36px; margin-bottom: 10px; }
+.nfe-drop-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.nfe-drop-sub { font-size: 11px; color: #b0c4e0; line-height: 1.5; }
+.nfe-hist { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.nfe-hist-item {
+  padding: 10px 12px; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--panel);
+  cursor: pointer; transition: all 0.15s;
+}
+.nfe-hist-item:hover { border-color: #ce93d8; }
+.nfe-hist-item.active { border-color: #ce93d8; background: rgba(156,39,176,0.1); }
+.nfe-hist-name { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+.nfe-hist-sub { font-family: var(--mono); font-size: 10px; color: #8fa8cc; }
+.nfe-right { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+.nfe-content { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+.nfe-header-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+}
+.nfe-header-inner { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; }
+.nfe-info-block {
+  padding: 14px 18px; border-right: 1px solid var(--border);
+}
+.nfe-info-block:last-child { border-right: none; }
+.nfe-info-label { font-family: var(--mono); font-size: 9px; color: #8fa8cc; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px; }
+.nfe-info-val { font-size: 13px; font-weight: 600; }
+.nfe-info-sub { font-family: var(--mono); font-size: 10px; color: #8fa8cc; margin-top: 3px; }
+.nfe-items-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.nfe-items-table th {
+  background: var(--panel2); padding: 8px 12px; text-align: left;
+  font-family: var(--mono); font-size: 9px; color: #8fa8cc;
+  letter-spacing: 1px; border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.nfe-items-table th.right { text-align: right; }
+.nfe-items-table td { padding: 8px 12px; border-bottom: 1px solid rgba(31,45,66,0.5); vertical-align: middle; }
+.nfe-items-table td.right { text-align: right; font-family: var(--mono); }
+.nfe-items-table tr:last-child td { border-bottom: none; }
+.nfe-items-table tr:hover td { background: rgba(255,255,255,0.015); }
+.ean-cell { font-family: var(--mono); font-size: 10px; color: #8fa8cc; }
+.match-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--mono); font-size: 9px; padding: 2px 7px;
+  border-radius: 4px; border: 1px solid;
+}
+.match-yes { background: var(--accent-dim); color: var(--accent); border-color: rgba(0,230,118,0.3); }
+.match-no  { background: rgba(255,109,0,0.1); color: var(--orange); border-color: rgba(255,109,0,0.3); }
+.nfe-action-bar {
+  padding: 14px 24px; border-top: 1px solid var(--border);
+  background: var(--bg2); display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.nfe-summary-chip {
+  font-family: var(--mono); font-size: 10px; color: #8fa8cc;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 10px;
+}
+.nfe-summary-chip strong { color: var(--text); }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* spinner */
+.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.3); border-top-color: #000; border-radius: 50%; animation: sp 0.6s linear infinite; }
+@keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logo">
+    📦 Supply IQ <span class="dot">·</span> <span class="logo-badge">PRO</span>
+  </div>
+  <div class="header-sep"></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchView('analysis')" id="tab-analysis">📊 Análise de Compras</button>
+    <button class="nav-tab tab-orange" onclick="switchView('requisicoes')" id="tab-requisicoes">🛒 Requisições Omie</button>
+    <button class="nav-tab tab-blue" onclick="switchView('fornecedores')" id="tab-fornecedores">🏢 Fornecedores</button>
+    <button class="nav-tab tab-purple" onclick="switchView('nfe')" id="tab-nfe">📄 Importar NF-e XML</button>
+    <button class="nav-tab tab-teal" onclick="switchView('produtos')" id="tab-produtos">🗂 Catálogo</button>
+  </div>
+</div>
+
+<div class="layout">
+
+<!-- ── SIDEBAR ── -->
+<div class="sidebar">
+  <div class="sidebar-section">Sistema</div>
+  <div class="sidebar-item active" onclick="switchView('analysis')">
+    <span class="icon">📊</span> Análise
+  </div>
+  <div class="sidebar-item" onclick="switchView('requisicoes')">
+    <span class="icon">🛒</span> Requisições
+    <span class="badge" id="sb-req-badge" style="display:none">0</span>
+  </div>
+  <div class="sidebar-item" onclick="switchView('fornecedores')">
+    <span class="icon">🏢</span> Fornecedores
+    <span class="badge green" id="sb-forn-badge">0</span>
+  </div>
+  <div class="sidebar-item" onclick="switchView('nfe')">
+    <span class="icon">📄</span> Importar NF-e
+  </div>
+  <div class="sidebar-item" onclick="switchView('produtos')">
+    <span class="icon">🗂</span> Catálogo
+    <span class="badge green" id="sb-prod-badge" style="background:#00bcd4;color:#000">0</span>
+  </div>
+  <div class="sidebar-section">Filtros Rápidos</div>
+  <div class="sidebar-item" onclick="setStatus('crit')" id="sb-crit">
+    <span class="icon">🔴</span> Crítico
+    <span class="badge" id="sb-crit-n">0</span>
+  </div>
+  <div class="sidebar-item" onclick="setStatus('warn')" id="sb-warn">
+    <span class="icon">🟠</span> Repor
+    <span class="badge" id="sb-warn-n" style="background:var(--orange)">0</span>
+  </div>
+  <div class="sidebar-item" onclick="setStatus('ok')" id="sb-ok">
+    <span class="icon">🟢</span> OK
+  </div>
+  <div class="sidebar-item" onclick="setStatus('sem')">
+    <span class="icon">⚫</span> Sem Venda
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+
+<!-- ═══ ANÁLISE VIEW ═══ -->
+<div class="view active" id="view-analysis">
+  <div class="analysis-layout">
+
+    <!-- Left Panel -->
+    <div class="analysis-left">
+      <div class="panel-head">📂 Carregar Dados</div>
+
+      <div class="upload-area" id="ua-estoque" ondragover="drag(event,'ua-estoque')" ondragleave="undrag('ua-estoque')" ondrop="drop(event,'estoque')">
+        <input type="file" accept=".xlsx,.xls" onchange="loadFile('estoque',this)">
+        <div class="upload-icon">🗄️</div>
+        <div class="upload-label">Arquivo 1</div>
+        <div class="upload-title">Posição de Estoque</div>
+        <div class="upload-desc">Pivot 44 · EAN, Descrição, Marca, Qtd Disponível</div>
+        <div class="upload-status" id="us-estoque">Clique ou arraste aqui</div>
+      </div>
+
+      <div class="upload-area" id="ua-fat" ondragover="drag(event,'ua-fat')" ondragleave="undrag('ua-fat')" ondrop="drop(event,'fat')">
+        <input type="file" accept=".xlsx,.xls" onchange="loadFile('fat',this)">
+        <div class="upload-icon">📈</div>
+        <div class="upload-label">Arquivo 2</div>
+        <div class="upload-title">Faturamento com EAN</div>
+        <div class="upload-desc">Pivot 46 · Data, EAN, Descrição, Marca, Quantidade</div>
+        <div class="upload-status" id="us-fat">Clique ou arraste aqui</div>
+      </div>
+
+      <div class="param-block">
+        <div class="param-label">Lead Time</div>
+        <div style="font-size:11px;color:#8fa8cc;line-height:1.5;font-family:var(--mono)">
+          Configurado por fornecedor.<br>
+          Padrão: <strong style="color:var(--yellow)">30 dias</strong> se não definido.
+        </div>
+      </div>
+      <div class="param-block">
+        <div class="param-label">Nível de Serviço</div>
+        <select class="param-select" id="pNS">
+          <option value="0.80">80% — Z = 0.842</option>
+          <option value="0.85">85% — Z = 1.036</option>
+          <option value="0.90" selected>90% — Z = 1.282</option>
+          <option value="0.95">95% — Z = 1.645</option>
+          <option value="0.99">99% — Z = 2.326</option>
+        </select>
+      </div>
+      <div class="param-block">
+        <div class="param-label">Fator de Cobertura</div>
+        <input class="param-input" type="number" id="pCob" value="1" min="0.5" max="5" step="0.5">
+      </div>
+
+      <button class="btn-run" id="btnRun" disabled onclick="runAnalysis()">
+        ▶ Calcular Análise
+      </button>
+
+      <!-- Filtros de status -->
+      <div class="filter-block">
+        <div class="param-label" style="margin-bottom:8px">Status</div>
+        <div class="filter-chips">
+          <div class="fchip active-all" id="fc-all" onclick="setStatus('all')"><span class="fdot" style="background:var(--text2)"></span> Todos <span class="fchip-count" id="fc-all-n">0</span></div>
+          <div class="fchip" id="fc-crit" onclick="setStatus('crit')"><span class="fdot" style="background:var(--red)"></span> Crítico <span class="fchip-count" id="fc-crit-n">0</span></div>
+          <div class="fchip" id="fc-warn" onclick="setStatus('warn')"><span class="fdot" style="background:var(--orange)"></span> Repor <span class="fchip-count" id="fc-warn-n">0</span></div>
+          <div class="fchip" id="fc-ok" onclick="setStatus('ok')"><span class="fdot" style="background:var(--accent)"></span> OK <span class="fchip-count" id="fc-ok-n">0</span></div>
+          <div class="fchip" id="fc-sem" onclick="setStatus('sem')"><span class="fdot" style="background:var(--text3)"></span> Sem Venda <span class="fchip-count" id="fc-sem-n">0</span></div>
+        </div>
+      </div>
+
+      <!-- Filtro de marca -->
+      <div class="filter-block" style="border-bottom:none; flex:1; overflow:hidden; display:flex; flex-direction:column;">
+        <div class="param-label" style="margin-bottom:6px">Marca</div>
+        <div class="marca-list" id="marcaList"></div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="analysis-right">
+
+      <!-- KPI strip -->
+      <div class="kpi-strip" id="kpiStrip">
+        <div class="kpi-item"><div class="kpi-label">Total SKUs</div><div class="kpi-val" id="kpi-total" style="color:var(--text2)">—</div><div class="kpi-sub">cadastrados</div></div>
+        <div class="kpi-item"><div class="kpi-label">⚠ Crítico</div><div class="kpi-val" id="kpi-crit" style="color:var(--red)">—</div><div class="kpi-sub">estoque ≤ seg.</div></div>
+        <div class="kpi-item"><div class="kpi-label">⚡ Repor</div><div class="kpi-val" id="kpi-warn" style="color:var(--orange)">—</div><div class="kpi-sub">estoque ≤ PR</div></div>
+        <div class="kpi-item"><div class="kpi-label">✔ OK</div><div class="kpi-val" id="kpi-ok" style="color:var(--accent)">—</div><div class="kpi-sub">adequado</div></div>
+        <div class="kpi-item"><div class="kpi-label">📦 A Comprar</div><div class="kpi-val" id="kpi-sug" style="color:var(--accent2)">—</div><div class="kpi-sub">unidades (total)</div></div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <input class="search-input" type="text" id="searchBox" placeholder="🔍  Buscar EAN, produto ou marca…" oninput="applyFilters()">
+        <button class="btn btn-orange" onclick="addSelectedToReq()" id="btnAddReq" style="display:none">
+          ➕ Adicionar à Requisição
+        </button>
+        <span class="toolbar-info" id="toolbarInfo">Carregue os arquivos para começar</span>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <div class="empty-state" id="emptyAnalysis">
+          <div class="empty-icon">📊</div>
+          <div class="empty-title">Nenhum dado carregado</div>
+          <div class="empty-sub">Carregue os dois arquivos de pivot e clique em "Calcular Análise" para ver os resultados aqui.</div>
+        </div>
+        <table id="mainTable" style="display:none">
+          <thead>
+            <tr>
+              <th class="td-check"><input type="checkbox" id="checkAll" onchange="toggleAll(this)" class="chk"></th>
+              <th onclick="sortBy('statusKey')">STATUS ↕</th>
+              <th onclick="sortBy('ean')">EAN ↕</th>
+              <th onclick="sortBy('desc')">PRODUTO ↕</th>
+              <th onclick="sortBy('marca')">MARCA ↕</th>
+              <th class="td-num" onclick="sortBy('estoque')">ESTOQUE ↕</th>
+              <th class="td-num" onclick="sortBy('leadTime')">LEAD ↕</th>
+              <th class="td-num" onclick="sortBy('demanda')">DEMANDA/DIA ↕</th>
+              <th class="td-num" onclick="sortBy('desvio')">σ ↕</th>
+              <th class="td-num" onclick="sortBy('es')">E.SEG ↕</th>
+              <th class="td-num" onclick="sortBy('pr')">P.REPO ↕</th>
+              <th class="td-num" onclick="sortBy('sug')">SUGESTÃO ↕</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ REQUISIÇÕES VIEW ═══ -->
+<div class="view" id="view-requisicoes">
+  <div class="req-layout">
+
+    <div class="req-left">
+      <div class="panel-head">🛒 Requisições de Compra
+        <span style="margin-left:auto;font-size:10px;color:var(--text3)" id="req-count-label">0 req.</span>
+      </div>
+      <div class="req-list" id="reqList">
+        <div class="empty-state" style="padding:32px 16px">
+          <div class="empty-icon">🛒</div>
+          <div class="empty-title" style="font-size:13px">Nenhuma requisição</div>
+          <div class="empty-sub">Selecione itens na análise e clique em "Adicionar à Requisição".</div>
+        </div>
+      </div>
+      <div style="padding:10px 8px; border-top:1px solid var(--border); display:flex; gap:6px;">
+        <button class="btn btn-ghost" style="flex:1;font-size:11px" onclick="newReq()">＋ Nova Requisição</button>
+      </div>
+    </div>
+
+    <div class="req-right" id="reqRight">
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">Selecione ou crie uma requisição</div>
+        <div class="empty-sub">Cada requisição gera um arquivo .xlsx pronto para importar no Omie.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ FORNECEDORES VIEW ═══ -->
+<div class="view" id="view-fornecedores">
+  <div class="fornec-layout">
+
+    <div class="fornec-left">
+      <div class="panel-head">🏢 Fornecedores Cadastrados</div>
+      <div class="fornec-list" id="fornecList">
+        <div class="empty-state" style="padding:32px 16px">
+          <div class="empty-icon">🏢</div>
+          <div class="empty-sub">Nenhum fornecedor ainda. Clique em "Novo Fornecedor".</div>
+        </div>
+      </div>
+      <div style="padding:10px 8px; border-top:1px solid var(--border);">
+        <button class="btn btn-blue" style="width:100%" onclick="newFornec()">＋ Novo Fornecedor</button>
+      </div>
+    </div>
+
+    <div class="fornec-right" id="fornecRight">
+      <div class="empty-state">
+        <div class="empty-icon">🏢</div>
+        <div class="empty-title">Cadastro de Fornecedores</div>
+        <div class="empty-sub">Aqui você cadastra fornecedores com os dados obrigatórios para gerar requisições Omie: Razão Social, Categoria de Compra, Número de Parcelas, Conta Corrente e Previsão de Entrega padrão.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ NF-e VIEW ═══ -->
+<div class="view" id="view-nfe">
+  <div class="nfe-layout">
+
+    <!-- Left: drop + histórico -->
+    <div class="nfe-left">
+      <div class="panel-head">📄 Importar NF-e XML</div>
+
+      <div class="nfe-drop-zone" id="nfeDrop"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="nfeDrop(event)">
+        <input type="file" accept=".xml" multiple onchange="nfeLoadFiles(this.files)">
+        <div class="nfe-drop-icon">🗂️</div>
+        <div class="nfe-drop-title">Arraste os XMLs aqui</div>
+        <div class="nfe-drop-sub">NF-e de fornecedores · pode importar vários de uma vez</div>
+      </div>
+
+      <div class="panel-head" style="border-top:1px solid var(--border);margin-top:0">
+        📋 Notas Importadas
+        <span style="margin-left:auto;font-size:10px;color:#8fa8cc" id="nfe-hist-count">0</span>
+      </div>
+      <div class="nfe-hist" id="nfeHist">
+        <div class="empty-state" style="padding:24px 16px">
+          <div class="empty-icon" style="font-size:32px">📄</div>
+          <div class="empty-sub">Nenhuma NF-e importada ainda.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: preview da NF selecionada -->
+    <div class="nfe-right" id="nfeRight">
+      <div class="empty-state">
+        <div class="empty-icon">📄</div>
+        <div class="empty-title">Selecione uma NF-e</div>
+        <div class="empty-sub">Importe um XML de NF-e para visualizar fornecedor, itens e custos unitários. Você poderá então cadastrar o fornecedor e atualizar os preços automaticamente.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- NF-e view end -->
+
+<!-- ═══ CATÁLOGO DE PRODUTOS VIEW ═══ -->
+<div class="view" id="view-produtos">
+  <div class="analysis-layout">
+
+    <!-- Left Panel -->
+    <div class="analysis-left">
+      <div class="panel-head" style="color:#00bcd4">🗂 Catálogo de Produtos</div>
+
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div class="param-label" style="margin-bottom:6px">Sincronizar</div>
+        <div style="font-size:11px;color:#8fa8cc;line-height:1.5;font-family:var(--mono);margin-bottom:8px">
+          Importa todos os SKUs carregados na Análise de Compras.
+        </div>
+        <button class="btn" style="background:#00bcd4;color:#000;font-weight:800;width:100%;justify-content:center;font-size:12px" onclick="sincronizarCatalogo()">
+          🔄 Sincronizar com Estoque
+        </button>
+      </div>
+
+      <div class="upload-area" id="ua-catalogo" style="border-color:rgba(0,188,212,0.4)"
+        ondragover="drag(event,'ua-catalogo')" ondragleave="undrag('ua-catalogo')"
+        ondrop="dropCatalogo(event)">
+        <input type="file" accept=".xlsx,.xls" onchange="loadCatalogo(this)">
+        <div class="upload-icon">📂</div>
+        <div class="upload-label" style="color:#00bcd4">Importar XLSX</div>
+        <div class="upload-title">Posição de Estoque</div>
+        <div class="upload-desc">Formato Omie ou Pivot · Código, Descrição, Marca, Qtd</div>
+        <div class="upload-status" id="us-catalogo">Clique ou arraste aqui</div>
+      </div>
+
+      <div class="filter-block" style="border-bottom:none;flex:1;overflow:hidden;display:flex;flex-direction:column">
+        <div class="param-label" style="margin-bottom:6px">Marca</div>
+        <div class="marca-list" id="prodMarcaList" style="flex:1;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="analysis-right">
+
+      <!-- KPI strip -->
+      <div class="kpi-strip">
+        <div class="kpi-item"><div class="kpi-label">📦 Total SKUs</div><div class="kpi-val" id="ckpi-total" style="color:#00bcd4">—</div><div class="kpi-sub">no catálogo</div></div>
+        <div class="kpi-item"><div class="kpi-label">🏷️ Marcas</div><div class="kpi-val" id="ckpi-marcas" style="color:var(--accent2)">—</div><div class="kpi-sub">distintas</div></div>
+        <div class="kpi-item"><div class="kpi-label">✅ Com Estoque</div><div class="kpi-val" id="ckpi-stock" style="color:var(--accent)">—</div><div class="kpi-sub">disponível &gt; 0</div></div>
+        <div class="kpi-item"><div class="kpi-label">⭕ Zerados</div><div class="kpi-val" id="ckpi-zero" style="color:var(--red)">—</div><div class="kpi-sub">sem estoque</div></div>
+        <div class="kpi-item"><div class="kpi-label">💰 CMC Total</div><div class="kpi-val" id="ckpi-cmc" style="color:var(--yellow);font-size:14px">—</div><div class="kpi-sub">valor em estoque</div></div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <input class="search-input" type="text" id="catSearchBox" placeholder="🔍  Buscar código, descrição, marca ou NCM…" oninput="renderCatalogo()">
+        <button class="btn btn-ghost" onclick="exportCatalogo()" style="font-size:11px">📥 Exportar XLSX</button>
+        <button class="btn btn-red" onclick="limparCatalogo()" style="font-size:11px">🗑 Limpar</button>
+        <span class="toolbar-info" id="catToolbarInfo">0 produtos</span>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <div class="empty-state" id="emptyCatalogo">
+          <div class="empty-icon">🗂</div>
+          <div class="empty-title">Catálogo vazio</div>
+          <div class="empty-sub">Importe uma planilha de posição de estoque ou clique em "Sincronizar com Estoque" após carregar a análise.</div>
+        </div>
+        <table id="catTable" style="display:none">
+          <thead>
+            <tr>
+              <th onclick="catSort('ean')">CÓDIGO / EAN ↕</th>
+              <th onclick="catSort('desc')">DESCRIÇÃO ↕</th>
+              <th onclick="catSort('ncm')">NCM ↕</th>
+              <th onclick="catSort('marca')">MARCA ↕</th>
+              <th class="td-num" onclick="catSort('qtdTotal')">QTD TOTAL ↕</th>
+              <th class="td-num" onclick="catSort('disponivel')">DISPONÍVEL ↕</th>
+              <th class="td-num" onclick="catSort('cmcTotal')">CMC TOTAL ↕</th>
+              <th>SITUAÇÃO</th>
+            </tr>
+          </thead>
+          <tbody id="catTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- .main -->
+</div><!-- .layout -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// CONTAS CORRENTES (lista exata do Omie)
+// ═══════════════════════════════════════════════════════════════════
+const CONTAS_CORRENTES = [
+  '01. Banco do Brasil',
+  '02. Itaú Unibanco',
+  '03. XP Investimentos',
+  '04. Mercado Pago Matriz',
+  '05. Amazon Matriz',
+  '06. Magalu Matriz',
+  '07. Shopee Matriz',
+  '08. Tik Tok',
+  '09. Visa - Banco do Brasil',
+  '10. Visa - Itaú',
+  '11. Caixinha',
+  '12. Arquivo de NFs em Duplicidade',
+  '13. XP Investimentos Aplicações',
+  '14. Itaú Unibanco Conta Garantida',
+  '15. Importação',
+  '16. Elo - Banco do Brasil',
+  'Ame',
+  'B2W Matriz',
+  'Omie.CASH',
+  'Omie.CASH (Boletos) (Inativo)',
+  'PagBank (PagSeguro)',
+  'x2 (Inativo) Via Varejo Matriz',
+];
+
+const LOCAIS_ESTOQUE = [
+  'PADRAO - Local de Estoque Padrão',
+  'AMZ - FBA Classic - Produtos Full Amazon',
+  'AMZ - FBA OnSite - Local de estoque FBA OnSite / Smart Conect',
+  'AVARIA_DEV - Devolução de Itens Avariados',
+  'EST_SEG - Estoque de segurança',
+  'MLV - Fulfillment - Produtos Full do Mercado Livre',
+  'MZL - Fulfillment - Produtos Full Magazine Luiza',
+];
+
+// ═══════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════
+const S = {
+  estoqueRaw: null,
+  fatRaw: null,
+  results: [],
+  filtered: [],
+  sortCol: 'statusKey',
+  sortDir: 1,
+  statusFilter: 'all',
+  marcaFilter: '',
+  selected: new Set(),
+  fornecedores: [],
+  requisicoes: [],
+  activeReq: null,
+  activeFornec: null,
+  nfeHistory: [],
+  activeNfe: null,
+  catalogo: [],
+  catMarcaFilter: '',
+};
+
+const Z_MAP = { 0.80:0.842, 0.85:1.036, 0.90:1.282, 0.95:1.645, 0.99:2.326 };
+
+// Persist
+function save() {
+  try {
+    localStorage.setItem('siq_fornec', JSON.stringify(S.fornecedores));
+    localStorage.setItem('siq_req', JSON.stringify(S.requisicoes));
+    localStorage.setItem('siq_nfe', JSON.stringify(S.nfeHistory));
+    localStorage.setItem('siq_catalogo', JSON.stringify(S.catalogo));
+  } catch(e) {}
+}
+function load() {
+  try {
+    S.fornecedores = JSON.parse(localStorage.getItem('siq_fornec') || '[]');
+    S.requisicoes = JSON.parse(localStorage.getItem('siq_req') || '[]');
+    S.nfeHistory = JSON.parse(localStorage.getItem('siq_nfe') || '[]');
+    S.catalogo = JSON.parse(localStorage.getItem('siq_catalogo') || '[]');
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════════
+function switchView(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.getElementById('tab-'+v).classList.add('active');
+  if (v === 'requisicoes') renderReqList();
+  if (v === 'fornecedores') renderFornecList();
+  if (v === 'nfe') renderNfeHist();
+  if (v === 'produtos') renderCatalogoFull();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FILE LOADING
+// ═══════════════════════════════════════════════════════════════════
+function drag(e, id) { e.preventDefault(); document.getElementById(id).classList.add('drag'); }
+function undrag(id) { document.getElementById(id).classList.remove('drag'); }
+function drop(e, type) {
+  e.preventDefault();
+  const id = type === 'estoque' ? 'ua-estoque' : 'ua-fat';
+  undrag(id);
+  const f = e.dataTransfer.files[0];
+  if (f) readXlsx(type, f);
+}
+function loadFile(type, input) { if (input.files[0]) readXlsx(type, input.files[0]); }
+
+function readXlsx(type, file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(e.target.result, { type: 'binary' });
+    const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, defval:null });
+    if (type === 'estoque') {
+      S.estoqueRaw = parseEstoque(raw);
+      const el = document.getElementById('ua-estoque');
+      const st = document.getElementById('us-estoque');
+      el.classList.add('loaded');
+      st.className = 'upload-status ok';
+      st.textContent = `✓ ${S.estoqueRaw.length} SKUs carregados`;
+    } else {
+      S.fatRaw = parseFat(raw);
+      const el = document.getElementById('ua-fat');
+      const st = document.getElementById('us-fat');
+      el.classList.add('loaded');
+      st.className = 'upload-status ok';
+      const dias = new Set(S.fatRaw.map(r=>r.data)).size;
+      st.textContent = `✓ ${S.fatRaw.length} linhas · ${dias} dias`;
+    }
+    document.getElementById('btnRun').disabled = !(S.estoqueRaw && S.fatRaw);
+  };
+  reader.readAsBinaryString(file);
+}
+
+function parseEstoque(rows) {
+  // Detecta header em até 10 linhas — aceita formato Omie ("Código do Produto")
+  // e formato pivot antigo ("EAN" / "GTIN")
+  let hi = -1;
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    const r = rows[i].map(c => String(c || '').toLowerCase());
+    if (
+      r.some(c => c.includes('código do produto') || c.includes('codigo do produto')) ||
+      r.some(c => c.includes('ean') || c.includes('gtin'))
+    ) { hi = i; break; }
+  }
+  if (hi < 0) return [];
+  const h = rows[hi].map(c => String(c || '').toLowerCase());
+
+  // Código / EAN — aceita "código do produto", "ean", "gtin"
+  const iE = h.findIndex(c =>
+    c.includes('código do produto') || c.includes('codigo do produto') ||
+    c.includes('ean') || c.includes('gtin')
+  );
+  const iD   = h.findIndex(c => c.includes('descri'));
+  const iM   = h.findIndex(c => c.includes('marca'));
+  const iNCM = h.findIndex(c => c.includes('ncm'));
+  const iTipo = h.findIndex(c => c.includes('tipo') || c.includes('sped'));
+  // Disponível tem prioridade; senão usa quantidade total
+  const iQ  = h.findIndex(c => c.includes('dispon'));
+  const iQT = h.findIndex(c => c.includes('quantidade') && !c.includes('dispon'));
+  const iCMC = h.findIndex(c => c.includes('cmc'));
+
+  const out = [];
+  for (let i = hi + 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || r.every(c => c === null || c === undefined || String(c).trim() === '')) continue;
+    const rawEan = String(r[iE] || '').trim().replace(/\.0$/, '').replace(/\s+/g, '');
+    if (!rawEan || rawEan === 'null' || rawEan === 'undefined') continue;
+    if (rawEan.toLowerCase().includes('total') || rawEan.toLowerCase().includes('grand')) continue;
+
+    const disponivel = parseFloat(iQ >= 0 && r[iQ] != null ? r[iQ] : 0) || 0;
+    const qtdTotal   = parseFloat(iQT >= 0 && r[iQT] != null ? r[iQT] : disponivel) || 0;
+    const cmcTotal   = parseFloat(iCMC >= 0 && r[iCMC] != null ? r[iCMC] : 0) || 0;
+
+    out.push({
+      ean:       rawEan,
+      desc:      String(r[iD]  || '').trim(),
+      marca:     String(r[iM]  || '').trim(),
+      estoque:   disponivel,   // campo usado pela análise
+      qtdTotal,
+      disponivel,
+      cmcTotal,
+      ncm:       iNCM  >= 0 ? String(r[iNCM]  || '').trim() : '',
+      tipo:      iTipo >= 0 ? String(r[iTipo] || '').trim() : '',
+    });
+  }
+  return out;
+}
+
+function parseFat(rows) {
+  let hi = -1;
+  for (let i=0;i<Math.min(rows.length,20);i++) {
+    const r = rows[i].map(c=>String(c||'').toLowerCase());
+    if (r.some(c=>c.includes('quantidade'))&&r.some(c=>c.includes('ean')||c.includes('data'))) { hi=i; break; }
+  }
+  if (hi<0) return [];
+  const h = rows[hi].map(c=>String(c||'').toLowerCase());
+  const iDt = h.findIndex(c=>c.includes('data'));
+  const iE  = h.findIndex(c=>c.includes('ean')||c.includes('gtin'));
+  const iD  = h.findIndex(c=>c.includes('descri'));
+  const iM  = h.findIndex(c=>c.includes('marca'));
+  const iQ  = h.findIndex(c=>c.includes('quantidade'));
+  const out = []; let ld='', lm='';
+  for (let i=hi+1;i<rows.length;i++) {
+    const r = rows[i];
+    const data = r[iDt]?String(r[iDt]).trim():ld;
+    if (data) ld = data;
+    if (!ld||ld.toLowerCase().includes('total')) break;
+    const ean = String(r[iE]||'').trim().replace(/\.0$/,'').replace(/\s/g,'');
+    if (!ean||ean==='null') continue;
+    const qtd = parseFloat(r[iQ]);
+    if (isNaN(qtd)) continue;
+    const marca = r[iM]?String(r[iM]).trim():lm;
+    if (marca) lm=marca;
+    out.push({ data:ld, ean, desc:String(r[iD]||'').trim(), marca:lm, qtd });
+  }
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ANALYSIS
+// ═══════════════════════════════════════════════════════════════════
+function runAnalysis() {
+  const ns   = parseFloat(document.getElementById('pNS').value)||0.90;
+  const cob  = parseFloat(document.getElementById('pCob').value)||1;
+  const z    = Z_MAP[ns]||1.282;
+  const DEFAULT_LEAD = 30;
+
+  // Build marca → lead time map from fornecedores
+  const marcaLead = {};
+  for (const f of S.fornecedores) {
+    const lead = parseInt(f.leadTime)||DEFAULT_LEAD;
+    for (const m of (f.marcas||[])) marcaLead[m] = lead;
+  }
+
+  const dias = [...new Set(S.fatRaw.map(r=>r.data))];
+  const nDias = dias.length;
+
+  // Pivot fat por EAN
+  const piv = {};
+  for (const r of S.fatRaw) {
+    if (!piv[r.ean]) piv[r.ean] = {};
+    piv[r.ean][r.data] = (piv[r.ean][r.data]||0)+r.qtd;
+  }
+  const stats = {};
+  for (const [ean,dm] of Object.entries(piv)) {
+    const s = dias.map(d=>dm[d]||0);
+    const mean = s.reduce((a,b)=>a+b,0)/nDias;
+    const vari = s.reduce((a,v)=>a+(v-mean)**2,0)/Math.max(s.length-1,1);
+    stats[ean] = { mean, std: Math.sqrt(vari) };
+  }
+
+  S.results = S.estoqueRaw.map(sku => {
+    const st = stats[sku.ean]||{mean:0,std:0};
+    const lead = marcaLead[sku.marca] ?? DEFAULT_LEAD;
+    const es  = Math.ceil(z*st.std*Math.sqrt(lead));
+    const pr  = Math.ceil(st.mean*lead+es);
+    const sug = Math.max(0, Math.ceil(pr+(st.mean*lead*cob)-sku.estoque));
+    let statusKey='sem', status='Sem Venda';
+    if (st.mean>0) {
+      if (sku.estoque<=es) { statusKey='crit'; status='CRÍTICO'; }
+      else if (sku.estoque<=pr) { statusKey='warn'; status='Repor'; }
+      else { statusKey='ok'; status='OK'; }
+    }
+    return { ...sku, demanda:st.mean, desvio:st.std, es, pr, sug, status, statusKey, nDias, leadTime:lead };
+  });
+
+  S.selected.clear();
+  document.getElementById('btnAddReq').style.display='none';
+  updateKPIs();
+  buildMarcaList();
+  applyFilters();
+  document.getElementById('mainTable').style.display='';
+  document.getElementById('emptyAnalysis').style.display='none';
+  toast('✅ Análise calculada — '+S.results.length+' SKUs processados','success');
+}
+
+function updateKPIs() {
+  const r = S.results;
+  document.getElementById('kpi-total').textContent = r.length;
+  const crits = r.filter(x=>x.statusKey==='crit').length;
+  const warns = r.filter(x=>x.statusKey==='warn').length;
+  const oks   = r.filter(x=>x.statusKey==='ok').length;
+  const sug   = r.reduce((a,x)=>a+x.sug,0);
+  document.getElementById('kpi-crit').textContent = crits;
+  document.getElementById('kpi-warn').textContent = warns;
+  document.getElementById('kpi-ok').textContent   = oks;
+  document.getElementById('kpi-sug').textContent  = sug.toLocaleString('pt-BR');
+  document.getElementById('fc-all-n').textContent  = r.length;
+  document.getElementById('fc-crit-n').textContent = crits;
+  document.getElementById('fc-warn-n').textContent = warns;
+  document.getElementById('fc-ok-n').textContent   = oks;
+  document.getElementById('fc-sem-n').textContent  = r.filter(x=>x.statusKey==='sem').length;
+  document.getElementById('sb-crit-n').textContent = crits;
+  document.getElementById('sb-warn-n').textContent = warns;
+}
+
+function buildMarcaList() {
+  const marcas = {};
+  for (const r of S.results) marcas[r.marca] = (marcas[r.marca]||0)+1;
+  const sorted = Object.entries(marcas).sort((a,b)=>b[1]-a[1]);
+  const el = document.getElementById('marcaList');
+  el.innerHTML = `<div class="marca-item ${S.marcaFilter===''?'active':''}" onclick="setMarca('')">
+    <span>Todas</span><span class="marca-count">${S.results.length}</span></div>` +
+    sorted.map(([m,n])=>`<div class="marca-item ${S.marcaFilter===m?'active':''}" onclick="setMarca('${m.replace(/'/g,"\\'")}')">
+      <span>${m||'—'}</span><span class="marca-count">${n}</span></div>`).join('');
+}
+
+function setMarca(m) { S.marcaFilter=m; buildMarcaList(); applyFilters(); }
+function setStatus(s) {
+  S.statusFilter=s;
+  ['all','crit','warn','ok','sem'].forEach(k=>{
+    const el=document.getElementById('fc-'+k);
+    if(el) el.className = 'fchip'+(s===k?' active-'+k:'');
+  });
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  let f = S.results.filter(r=>{
+    if (S.statusFilter!=='all'&&r.statusKey!==S.statusFilter) return false;
+    if (S.marcaFilter&&r.marca!==S.marcaFilter) return false;
+    if (q&&!r.ean.includes(q)&&!r.desc.toLowerCase().includes(q)&&!r.marca.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const col=S.sortCol;
+  const ORDER = {crit:0,warn:1,ok:2,sem:3};
+  f.sort((a,b)=>{
+    let va = col==='statusKey'?(ORDER[a.statusKey]??4):a[col];
+    let vb = col==='statusKey'?(ORDER[b.statusKey]??4):b[col];
+    if (typeof va==='string') va=va.toLowerCase();
+    if (typeof vb==='string') vb=vb.toLowerCase();
+    return (va<vb?-1:va>vb?1:0)*S.sortDir;
+  });
+  S.filtered=f;
+  document.getElementById('toolbarInfo').textContent = f.length+' resultado'+(f.length!==1?'s':'');
+  renderTable();
+}
+
+function sortBy(col) {
+  if(S.sortCol===col) S.sortDir*=-1; else { S.sortCol=col; S.sortDir=1; }
+  applyFilters();
+}
+
+function renderTable() {
+  const BADGE = {
+    crit:`<span class="badge b-crit"><span class="bd bd-pulse"></span>CRÍTICO</span>`,
+    warn:`<span class="badge b-warn"><span class="bd"></span>REPOR</span>`,
+    ok:  `<span class="badge b-ok"><span class="bd"></span>OK</span>`,
+    sem: `<span class="badge b-sem">SEM VENDA</span>`,
+  };
+  document.getElementById('tableBody').innerHTML = S.filtered.map(r=>{
+    const sc = r.sug>100?'sug-crit':r.sug>20?'sug-warn':r.sug>0?'sug-ok':'sug-zero';
+    const chk = S.selected.has(r.ean) ? 'checked' : '';
+    const leadColor = r.leadTime===30&&!S.fornecedores.some(f=>(f.marcas||[]).includes(r.marca)) ? 'color:#f5c542' : 'color:#b0c4e0';
+    const leadTip = r.leadTime===30&&!S.fornecedores.some(f=>(f.marcas||[]).includes(r.marca)) ? ' title="Padrão (sem fornecedor vinculado)"' : ` title="Lead time do fornecedor"`;
+    return `<tr>
+      <td class="td-check"><input type="checkbox" class="chk" ${chk} onchange="toggleRow('${r.ean}',this)"></td>
+      <td>${BADGE[r.statusKey]||''}</td>
+      <td class="td-ean">${r.ean}</td>
+      <td class="td-desc" title="${r.desc}">${r.desc||'—'}</td>
+      <td class="td-marca"><span class="marca-tag">${r.marca||'—'}</span></td>
+      <td class="td-num">${r.estoque}</td>
+      <td class="td-num" style="${leadColor};font-family:var(--mono)" ${leadTip}>${r.leadTime}d</td>
+      <td class="td-num">${r.demanda>0?r.demanda.toFixed(2):'—'}</td>
+      <td class="td-num">${r.demanda>0?r.desvio.toFixed(2):'—'}</td>
+      <td class="td-num">${r.demanda>0?r.es:'—'}</td>
+      <td class="td-num">${r.demanda>0?r.pr:'—'}</td>
+      <td class="td-num"><span class="${sc}">${r.sug>0?r.sug:'—'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleRow(ean, cb) {
+  if(cb.checked) S.selected.add(ean); else S.selected.delete(ean);
+  const n = S.selected.size;
+  const btn = document.getElementById('btnAddReq');
+  btn.style.display = n>0?'':'none';
+  btn.textContent = `➕ Adicionar ${n} item${n!==1?'s':''} à Requisição`;
+}
+
+function toggleAll(cb) {
+  S.filtered.forEach(r=>{ if(cb.checked) S.selected.add(r.ean); else S.selected.delete(r.ean); });
+  renderTable();
+  const n=S.selected.size;
+  const btn=document.getElementById('btnAddReq');
+  btn.style.display=n>0?'':'none';
+  if(n>0) btn.textContent=`➕ Adicionar ${n} itens à Requisição`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// REQUISIÇÕES
+// ═══════════════════════════════════════════════════════════════════
+function addSelectedToReq() {
+  if(S.selected.size===0) return;
+  const items = S.results.filter(r=>S.selected.has(r.ean));
+  // Agrupar por marca para sugerir requisições separadas
+  const byMarca = {};
+  items.forEach(it=>{ (byMarca[it.marca]=byMarca[it.marca]||[]).push(it); });
+  // Criar uma req por marca
+  for (const [marca, itens] of Object.entries(byMarca)) {
+    const req = {
+      id: Date.now()+'_'+Math.random().toString(36).slice(2,6),
+      titulo: `Req. ${marca} — ${new Date().toLocaleDateString('pt-BR')}`,
+      marca,
+      fornecedor: S.fornecedores.find(f=>f.marcas&&f.marcas.includes(marca))?.razaoSocial||'',
+      fornecedorObj: S.fornecedores.find(f=>f.marcas&&f.marcas.includes(marca))||null,
+      previsaoEntrega: '',
+      categoriaCompra: '',
+      numeroParcelas: '1',
+      contaCorrente: '',
+      comprador: '',
+      projeto: '',
+      observacoes: '',
+      tipoFrete: '9 - Sem Frete',
+      localEstoque: 'Galpão',
+      itens: itens.map((it,i)=>({
+        item: i+1,
+        ean: it.ean,
+        produto: it.desc||it.ean,
+        qtd: it.sug||1,
+        preco: 0,
+      })),
+      criadoEm: new Date().toISOString(),
+    };
+    S.requisicoes.push(req);
+  }
+  save();
+  S.selected.clear();
+  renderTable();
+  document.getElementById('btnAddReq').style.display='none';
+  document.getElementById('sb-req-badge').style.display='';
+  document.getElementById('sb-req-badge').textContent = S.requisicoes.length;
+  toast(`✅ ${Object.keys(byMarca).length} requisição(ões) criada(s) por marca`,'success');
+  switchView('requisicoes');
+}
+
+function newReq() {
+  const req = {
+    id: Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    titulo: `Requisição ${new Date().toLocaleDateString('pt-BR')}`,
+    marca: '', fornecedor:'', fornecedorObj:null,
+    previsaoEntrega:'', categoriaCompra:'', numeroParcelas:'1',
+    contaCorrente:'', comprador:'', projeto:'', observacoes:'',
+    tipoFrete:'9 - Sem Frete', localEstoque:'Galpão',
+    itens:[{item:1,ean:'',produto:'',qtd:1,preco:0}],
+    criadoEm: new Date().toISOString(),
+  };
+  S.requisicoes.push(req);
+  save();
+  renderReqList();
+  openReq(req.id);
+}
+
+function renderReqList() {
+  const el = document.getElementById('reqList');
+  document.getElementById('req-count-label').textContent = S.requisicoes.length+' req.';
+  document.getElementById('sb-req-badge').textContent = S.requisicoes.length;
+  document.getElementById('sb-req-badge').style.display = S.requisicoes.length>0?'':'none';
+  if(!S.requisicoes.length) {
+    el.innerHTML=`<div class="empty-state" style="padding:32px 16px">
+      <div class="empty-icon">🛒</div>
+      <div class="empty-title" style="font-size:13px">Nenhuma requisição</div>
+      <div class="empty-sub">Selecione itens na análise e clique em "Adicionar à Requisição".</div>
+    </div>`; return;
+  }
+  el.innerHTML = S.requisicoes.map(r=>`
+    <div class="req-card ${S.activeReq===r.id?'active':''}" onclick="openReq('${r.id}')">
+      <div class="req-card-title">${r.titulo}</div>
+      <div class="req-card-sub">${r.itens.length} item${r.itens.length!==1?'s':''} · ${r.marca||'Sem marca'}</div>
+      <div class="req-card-meta">
+        ${r.fornecedor?`<span class="req-tag">🏢 ${r.fornecedor.slice(0,20)}</span>`:'<span class="req-tag" style="color:var(--red)">⚠ Sem fornecedor</span>'}
+        ${r.previsaoEntrega?`<span class="req-tag">📅 ${r.previsaoEntrega}</span>`:'<span class="req-tag" style="color:var(--orange)">⚠ Sem data</span>'}
+      </div>
+    </div>`).join('');
+}
+
+function openReq(id) {
+  S.activeReq = id;
+  renderReqList();
+  const req = S.requisicoes.find(r=>r.id===id);
+  if(!req) return;
+  const right = document.getElementById('reqRight');
+
+  const fornOptions = S.fornecedores.map(f=>`<option value="${f.id}" ${req.fornecedorObj?.id===f.id?'selected':''}>${f.razaoSocial}</option>`).join('');
+  const forn = req.fornecedorObj;
+  const parcelasVal = req.numeroParcelas || forn?.numeroParcelas || 1;
+
+  // Build items rows
+  const itemRows = req.itens.map((it,idx)=>{
+    const custo = forn?.custos?.[it.ean];
+    const precoVal = it.preco > 0 ? it.preco : (custo?.vUnit || 0);
+    const priceStyle = precoVal > 0 ? 'color:var(--accent)' : 'color:var(--orange)';
+    const priceTitle = custo && it.preco===0 ? `title="Da última NF-e: R$ ${custo.vUnit.toFixed(2)}"` : '';
+    return `<tr>
+      <td style="width:36px;color:#6b82a6;font-family:var(--mono);font-size:11px;padding:7px 8px">${it.item}</td>
+      <td style="width:125px;color:#8fa8cc;font-size:10px;font-family:var(--mono);padding:7px 8px">${it.ean||'—'}</td>
+      <td style="padding:5px 8px"><input class="field-input" style="width:100%;padding:5px 8px;font-size:11px" value="${(it.produto||'').replace(/"/g,'&quot;')}" onchange="updItem('${id}',${idx},'produto',this.value)"></td>
+      <td style="width:75px;padding:5px 8px"><input class="field-input" type="number" style="width:100%;padding:5px 8px;font-size:11px;text-align:right" value="${it.qtd}" min="1" onchange="updItem('${id}',${idx},'qtd',parseFloat(this.value)||1)"></td>
+      <td style="width:105px;padding:5px 8px"><input class="field-input" type="number" style="width:100%;padding:5px 8px;font-size:11px;${priceStyle}" value="${precoVal}" min="0" step="0.01" ${priceTitle} onchange="updItem('${id}',${idx},'preco',parseFloat(this.value)||0)"></td>
+      <td style="width:38px;padding:5px 6px"><button onclick="removeItem('${id}',${idx})" style="background:var(--red-dim);border:1px solid rgba(255,23,68,0.3);color:var(--red);border-radius:5px;cursor:pointer;width:28px;height:28px;font-size:12px;display:flex;align-items:center;justify-content:center">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  right.innerHTML = `
+    <div class="req-form">
+
+      <input class="field-input" style="font-size:16px;font-weight:700;width:100%" value="${req.titulo}" onchange="updReq('${id}','titulo',this.value)" placeholder="Título da requisição">
+
+      <!-- SEÇÃO 1: DADOS DA COMPRA -->
+      <div class="form-section">
+        <div class="form-section-head">📋 1. Dados da Compra</div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+
+          <!-- Fornecedor - full width -->
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div class="field-label field-required">Fornecedor</div>
+            <select class="field-select" onchange="selectFornec('${id}',this.value)">
+              <option value="">— Selecione o fornecedor —</option>
+              ${fornOptions}
+            </select>
+            ${S.fornecedores.length===0?`<span style="font-size:10px;color:var(--orange);font-family:var(--mono)">⚠ Nenhum fornecedor. <a href="#" onclick="switchView('fornecedores')" style="color:var(--accent2)">Cadastrar agora</a></span>`:''}
+          </div>
+
+          <!-- Row: Previsão + Categoria -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div class="field-label field-required">Previsão de Entrega</div>
+              <input class="field-input" type="text" placeholder="dd/mm/aaaa" value="${req.previsaoEntrega}" onchange="updReq('${id}','previsaoEntrega',this.value)">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div class="field-label field-required">Categoria de Compra</div>
+              <input class="field-input" value="Compras de Mercadorias para Revenda" readonly style="opacity:0.55;cursor:not-allowed">
+            </div>
+          </div>
+
+          <!-- Row: Parcelas + Conta Corrente -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div class="field-label field-required">Número de Parcelas</div>
+              <input class="field-input" type="number" min="1" value="${parcelasVal}" onchange="updReq('${id}','numeroParcelas',this.value)">
+              <span style="font-size:10px;color:#8fa8cc;font-family:var(--mono)">Do fornecedor · editável</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div class="field-label field-required">Conta Corrente</div>
+              <select class="field-select" onchange="updReq('${id}','contaCorrente',this.value)">
+                <option value="">— Selecione —</option>
+                ${CONTAS_CORRENTES.map(c=>`<option value="${c}" ${req.contaCorrente===c?'selected':''}>${c}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+
+          <!-- Row: Comprador + Projeto -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div class="field-label">Comprador</div>
+              <input class="field-input" type="text" value="${req.comprador||''}" onchange="updReq('${id}','comprador',this.value)">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div class="field-label">Projeto</div>
+              <input class="field-input" type="text" value="${req.projeto||''}" onchange="updReq('${id}','projeto',this.value)">
+            </div>
+          </div>
+
+          <!-- Row: Frete + Observações -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div class="field-label">Tipo de Frete</div>
+              <select class="field-select" onchange="updReq('${id}','tipoFrete',this.value)">
+                ${['9 - Sem Frete','0 - CIF (Remetente)','1 - FOB (Destinatário)','2 - Terceiros','3 - Próprio Remetente','4 - Próprio Destinatário'].map(v=>`<option ${req.tipoFrete===v?'selected':''}>${v}</option>`).join('')}
+              </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div class="field-label">Observações</div>
+              <textarea class="field-textarea" style="min-height:38px;resize:none" onchange="updReq('${id}','observacoes',this.value)">${req.observacoes||''}</textarea>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SEÇÃO 2: ITENS -->
+      <div class="form-section">
+        <div class="form-section-head">
+          📦 2. Itens do Pedido
+          <span style="margin-left:auto;font-size:10px;font-weight:500;color:#8fa8cc">${req.itens.length} item(ns)</span>
+        </div>
+        <div style="padding:12px 16px 8px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div class="field-label field-required">Local de Estoque (todos os itens)</div>
+            <select class="field-select" onchange="updReq('${id}','localEstoque',this.value)">
+              ${LOCAIS_ESTOQUE.map(l=>`<option value="${l}" ${(req.localEstoque||LOCAIS_ESTOQUE[0])===l?'selected':''}>${l}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed">
+          <thead>
+            <tr style="background:var(--bg)">
+              <th style="width:36px;padding:7px 8px;text-align:left;font-family:var(--mono);font-size:9px;color:#8fa8cc;letter-spacing:1px;border-bottom:1px solid var(--border)">#</th>
+              <th style="width:125px;padding:7px 8px;text-align:left;font-family:var(--mono);font-size:9px;color:#8fa8cc;letter-spacing:1px;border-bottom:1px solid var(--border)">EAN</th>
+              <th style="padding:7px 8px;text-align:left;font-family:var(--mono);font-size:9px;color:#8fa8cc;letter-spacing:1px;border-bottom:1px solid var(--border)">PRODUTO *</th>
+              <th style="width:75px;padding:7px 8px;text-align:left;font-family:var(--mono);font-size:9px;color:#8fa8cc;letter-spacing:1px;border-bottom:1px solid var(--border)">QTD *</th>
+              <th style="width:105px;padding:7px 8px;text-align:left;font-family:var(--mono);font-size:9px;color:#8fa8cc;letter-spacing:1px;border-bottom:1px solid var(--border)">PREÇO UN. *</th>
+              <th style="width:38px;border-bottom:1px solid var(--border)"></th>
+            </tr>
+          </thead>
+          <tbody>${itemRows}</tbody>
+        </table>
+        <div style="padding:10px 16px">
+          <button class="btn btn-ghost" style="font-size:11px" onclick="addItem('${id}')">＋ Adicionar Item</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="req-footer">
+      <button class="btn btn-red" onclick="deleteReq('${id}')">🗑 Excluir</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-orange" onclick="validateAndDownload('${id}')">📥 Baixar XLSX Omie</button>
+    </div>
+  `;
+}
+
+function updReq(id, field, val) {
+  const req = S.requisicoes.find(r=>r.id===id);
+  if(req) { req[field]=val; save(); renderReqList(); }
+}
+function updItem(id, idx, field, val) {
+  const req = S.requisicoes.find(r=>r.id===id);
+  if(req&&req.itens[idx]) { req.itens[idx][field]=val; save(); }
+}
+function addItem(id) {
+  const req = S.requisicoes.find(r=>r.id===id);
+  if(!req) return;
+  req.itens.push({ item:req.itens.length+1, ean:'', produto:'', qtd:1, preco:0 });
+  save(); openReq(id);
+}
+function removeItem(id, idx) {
+  const req = S.requisicoes.find(r=>r.id===id);
+  if(!req) return;
+  req.itens.splice(idx,1);
+  req.itens.forEach((it,i)=>it.item=i+1);
+  save(); openReq(id);
+}
+function deleteReq(id) {
+  if(!confirm('Excluir esta requisição?')) return;
+  S.requisicoes = S.requisicoes.filter(r=>r.id!==id);
+  S.activeReq = null;
+  save(); renderReqList();
+  document.getElementById('reqRight').innerHTML=`<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Selecione uma requisição</div></div>`;
+}
+function selectFornec(reqId, fornId) {
+  const req = S.requisicoes.find(r=>r.id===reqId);
+  const forn = S.fornecedores.find(f=>f.id===fornId);
+  if(!req) return;
+  req.fornecedorObj = forn||null;
+  req.fornecedor = forn?.razaoSocial||'';
+  if(forn) {
+    if(forn.numeroParcelas) req.numeroParcelas=forn.numeroParcelas;
+    if(forn.contaCorrente&&!req.contaCorrente) req.contaCorrente=forn.contaCorrente;
+    if(forn.previsaoEntrega&&!req.previsaoEntrega) req.previsaoEntrega=forn.previsaoEntrega;
+  }
+  save(); openReq(reqId);
+}
+
+// ── EXPORT OMIE ──
+function validateAndDownload(id) {
+  const req = S.requisicoes.find(r=>r.id===id);
+  if(!req) return;
+  const erros = [];
+  if(!req.fornecedor) erros.push('Fornecedor obrigatório');
+  if(!req.previsaoEntrega) erros.push('Previsão de Entrega obrigatória');
+  if(!req.numeroParcelas) erros.push('Número de Parcelas obrigatório');
+  if(!req.contaCorrente) erros.push('Conta Corrente obrigatória');
+  const itensInvalidos = req.itens.filter(it=>!it.produto||it.preco<=0);
+  if(itensInvalidos.length>0) erros.push(`${itensInvalidos.length} item(ns) sem produto ou preço`);
+  if(req.itens.length===0) erros.push('Adicione pelo menos 1 item');
+  if(erros.length>0) { toast('⚠ '+erros[0],'error'); return; }
+  downloadOmie(req);
+}
+
+function downloadOmie(req) {
+  const wb = XLSX.utils.book_new();
+  const ws_data = [];
+
+  // Rows 1-3: title
+  ws_data.push([]); ws_data.push([]); ws_data.push([]); ws_data.push(['1. Dados da Compra']);
+
+  // Row 4: descriptions (obrigatório hints)
+  ws_data.push([
+    '(opcional)\n(texto e número - 20)\nCódigo deste pedido de compra em outro sistema',
+    '(obrigatório)\n(texto e número - 60)\nPreencha aqui a razão social, nome fantasia, CNPJ ou CPF do fornecedor',
+    '(obrigatório)\n(data - dd/mm/aaaa)\nTrata-se da data prevista que as mercadorias serão entregues',
+    '(obrigatório)\n(texto e número - 70)\nPreencha com a descrição da categoria',
+    '(obrigatório)\nPreencha aqui o número de parcelas',
+    '(opcional)\n(texto e número - 70)\nPreencha o nome do comprador',
+    '(opcional)\n(texto e número - 70)\nPreencha o nome do projeto',
+    '(obrigatório)\n(número e pontos - 40)\nInforme o nome da conta corrente',
+    '(opcional)\n(texto  e número - 20)',
+    '(opcional)\n(texto  e número - 100)',
+    '(opcional)\nObservações do pedido',
+    '(opcional)\nObservação interna',
+  ]);
+
+  // Row 5: headers
+  ws_data.push([
+    null,
+    'Código de Integração',
+    'Fornecedor * (Razão Social, Nome Fantasia, CNPJ ou CPF)',
+    'Previsão de Entrega *',
+    'Categoria de Compra *',
+    'Número de Parcelas *',
+    'Comprador',
+    'Projeto',
+    'Conta Corrente *',
+    'Nº do Pedido do Fornecedor',
+    'Contato',
+    'Observações do Pedido',
+    'Observação Interna',
+  ]);
+
+  // Row 6: data
+  ws_data.push([
+    null,
+    null,
+    req.fornecedor,
+    req.previsaoEntrega,
+    'Compras de Mercadorias para Revenda',
+    parseInt(req.numeroParcelas)||1,
+    req.comprador||null,
+    req.projeto||null,
+    req.contaCorrente,
+    null, null,
+    req.observacoes||null,
+    null,
+  ]);
+
+  // Row 7: limits placeholder
+  ws_data.push(new Array(15).fill('limite'));
+
+  // Row 8: frete section
+  ws_data.push(['2. Frete e Outras Despesas']);
+  ws_data.push([
+    '(opcional)\nSelecione o tipo do frete',null,null,null,null,null,null,null,null,null,null,null,null,null,
+  ]);
+  ws_data.push([null, null, req.tipoFrete||'9 - Sem Frete', null,null,null,null,null,null,null,null,null,null,null]);
+  ws_data.push(new Array(15).fill('limite'));
+
+  // Items section
+  ws_data.push(['2. Itens do Pedido de Compra']);
+  ws_data.push([
+    '(opcional)\n(texto e número - 20)\nCódigo deste item em outro sistema',
+    '(obrigatório)\n(texto e número - 100)\nPreencha aqui o código ou a descrição do produto',
+    '(obrigatório)\n(texto e número - 250)\nPreencha aqui o código ou a descrição do local de estoque',
+    '(obrigatório)\n(númerico - 18,4)',
+    '(obrigatório)\n(numérico - 19,6)',
+    '(obrigatório)\n(numérico - 18,6)',
+    null,null,null,null,null,null,null,null,
+  ]);
+  ws_data.push([
+    null,'# Item','Código de Integração','Produto * (Código ou Descrição)',
+    'Local de Estoque * (Código ou Descrição)','Quantidade *','Preço Unitário *',
+    'Valor do Desconto','Valor do ICMS','Valor do ICMS ST','Valor do IPI',
+    'Valor do PIS','Valor do COFINS','Peso Líquido (Kg)','Peso Bruto (Kg)','Observações do Item',
+  ]);
+  req.itens.forEach((it,i)=>{
+    ws_data.push([
+      null, i+1, it.ean||null,
+      it.produto,
+      req.localEstoque||'PADRAO - Local de Estoque Padrão',
+      it.qtd,
+      it.preco||0,
+      null,null,null,null,null,null,null,null,null,
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  ws['!sheetname'] = 'Omie_Pedido_Compra';
+  XLSX.utils.book_append_sheet(wb, ws, 'Omie_Pedido_Compra');
+
+  // Config sheet
+  const ws_cfg = XLSX.utils.aoa_to_sheet([['Configurações'],['Planilha','Omie_Pedido_Compra'],['Versão','1.1.3']]);
+  XLSX.utils.book_append_sheet(wb, ws_cfg, 'Config');
+
+  const fname = `Omie_Compra_${req.marca||'Geral'}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, fname);
+  toast('✅ Arquivo XLSX gerado: '+fname,'success');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FORNECEDORES
+// ═══════════════════════════════════════════════════════════════════
+function renderFornecList() {
+  document.getElementById('sb-forn-badge').textContent = S.fornecedores.length;
+  const el = document.getElementById('fornecList');
+  if(!S.fornecedores.length) {
+    el.innerHTML=`<div class="empty-state" style="padding:32px 16px"><div class="empty-icon">🏢</div><div class="empty-sub">Nenhum fornecedor. Clique em "Novo Fornecedor".</div></div>`;
+    return;
+  }
+  el.innerHTML = S.fornecedores.map(f=>`
+    <div class="fornec-item ${S.activeFornec===f.id?'active':''}" onclick="openFornec('${f.id}')">
+      <div class="fornec-name">${f.razaoSocial||'Sem nome'}</div>
+      <div class="fornec-cnpj">${f.cnpj||'Sem CNPJ'}</div>
+      <div class="fornec-marcas">${f.marcas&&f.marcas.length>0?'Marcas: '+f.marcas.join(', '):'Sem marcas vinculadas'}</div>
+    </div>`).join('');
+}
+
+function newFornec() {
+  const f = {
+    id: Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    razaoSocial:'', cnpj:'', categoriaCompra:'',
+    numeroParcelas:'1', contaCorrente:'', previsaoEntrega:'',
+    marcas:[],
+  };
+  S.fornecedores.push(f);
+  save(); renderFornecList(); openFornec(f.id);
+}
+
+function openFornec(id) {
+  S.activeFornec = id;
+  renderFornecList();
+  const f = S.fornecedores.find(x=>x.id===id);
+  if(!f) return;
+
+  // Get all marcas from analysis results
+  const allMarcas = [...new Set(S.results.map(r=>r.marca).filter(Boolean))].sort();
+
+  document.getElementById('fornecRight').innerHTML=`
+    <div class="fornec-form">
+      <div style="font-size:18px;font-weight:800;margin-bottom:4px">Dados do Fornecedor</div>
+
+      <div class="form-section">
+        <div class="form-section-head">🏢 Identificação</div>
+        <div class="form-grid">
+          <div class="form-field full">
+            <div class="field-label field-required">Razão Social / Nome Fantasia / CNPJ / CPF</div>
+            <input class="field-input" value="${f.razaoSocial}" onchange="updFornec('${id}','razaoSocial',this.value)" placeholder="Razão social exata como no Omie">
+          </div>
+          <div class="form-field">
+            <div class="field-label">CNPJ / CPF</div>
+            <input class="field-input" value="${f.cnpj||''}" onchange="updFornec('${id}','cnpj',this.value)" placeholder="00.000.000/0001-00">
+          </div>
+          <div class="form-field">
+            <div class="field-label">Telefone / Contato</div>
+            <input class="field-input" value="${f.contato||''}" onchange="updFornec('${id}','contato',this.value)">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-head">📋 Padrão para Pedidos Omie</div>
+        <div class="form-grid">
+          <div class="form-field full">
+            <div class="field-label">Categoria de Compra</div>
+            <input class="field-input" value="Compras de Mercadorias para Revenda" readonly style="opacity:0.5;cursor:not-allowed;">
+            <span style="font-size:10px;color:#8fa8cc;font-family:var(--mono)">Valor fixo — padrão do sistema</span>
+          </div>
+          <div class="form-field">
+            <div class="field-label field-required">Número de Parcelas (padrão)</div>
+            <input class="field-input" type="number" min="1" value="${f.numeroParcelas||1}" onchange="updFornec('${id}','numeroParcelas',this.value)">
+          </div>
+          <div class="form-field">
+            <div class="field-label field-required">Conta Corrente</div>
+            <select class="field-select" onchange="updFornec('${id}','contaCorrente',this.value)">
+              <option value="">— Selecione a conta —</option>
+              ${CONTAS_CORRENTES.map(c=>`<option value="${c}" ${(f.contaCorrente||'')===c?'selected':''}>${c}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-field">
+            <div class="field-label">Previsão de Entrega Padrão</div>
+            <input class="field-input" value="${f.previsaoEntrega||''}" onchange="updFornec('${id}','previsaoEntrega',this.value)" placeholder="dd/mm/aaaa">
+          </div>
+          <div class="form-field">
+            <div class="field-label field-required">Lead Time (dias)</div>
+            <input class="field-input" type="number" value="${f.leadTime||30}" min="1" onchange="updFornec('${id}','leadTime',parseInt(this.value)||30)">
+            <span style="font-size:10px;color:#8fa8cc;font-family:var(--mono)">Padrão global: 30 dias se não vinculado</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-head">🏷️ Marcas Vinculadas
+          <span style="font-size:10px;font-weight:400;margin-left:8px;color:var(--text3)">Requisições desas marcas usarão este fornecedor automaticamente</span>
+        </div>
+        <div style="padding:14px 16px;display:flex;flex-wrap:wrap;gap:8px" id="marcas-sel-${id}">
+          ${allMarcas.length===0?'<span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Carregue a análise para ver as marcas disponíveis.</span>':''}
+          ${allMarcas.map(m=>`<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-family:var(--mono)">
+            <input type="checkbox" class="chk" ${(f.marcas||[]).includes(m)?'checked':''} onchange="toggleMarca('${id}','${m}',this.checked)">
+            ${m}
+          </label>`).join('')}
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:8px">
+        <button class="btn btn-red" onclick="deleteFornec('${id}')">🗑 Excluir</button>
+        <button class="btn btn-primary" onclick="toast('✅ Fornecedor salvo automaticamente','success')">✔ Salvo automaticamente</button>
+      </div>
+    </div>
+  `;
+}
+
+function updFornec(id, field, val) {
+  const f = S.fornecedores.find(x=>x.id===id);
+  if(f) { f[field]=val; save(); renderFornecList(); }
+}
+function toggleMarca(fornId, marca, checked) {
+  const f = S.fornecedores.find(x=>x.id===fornId);
+  if(!f) return;
+  if(!f.marcas) f.marcas=[];
+  if(checked && !f.marcas.includes(marca)) f.marcas.push(marca);
+  else if(!checked) f.marcas=f.marcas.filter(m=>m!==marca);
+  save(); renderFornecList();
+}
+function deleteFornec(id) {
+  if(!confirm('Excluir este fornecedor?')) return;
+  S.fornecedores = S.fornecedores.filter(f=>f.id!==id);
+  S.activeFornec=null;
+  save(); renderFornecList();
+  document.getElementById('fornecRight').innerHTML=`<div class="empty-state"><div class="empty-icon">🏢</div><div class="empty-title">Fornecedor excluído</div></div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// NF-e IMPORT
+// ═══════════════════════════════════════════════════════════════════
+// costDB: { [ean]: preco } — persisted per fornecedor via fornec.custos
+// nfeHistory: array of parsed NF objects — session only (or persist)
+
+function nfeDrop(e) {
+  e.preventDefault();
+  document.getElementById('nfeDrop').classList.remove('drag');
+  nfeLoadFiles(e.dataTransfer.files);
+}
+
+function nfeLoadFiles(files) {
+  Array.from(files).forEach(f => {
+    if (!f.name.toLowerCase().endsWith('.xml')) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const parsed = parseNFe(ev.target.result, f.name);
+      if (parsed) {
+        // avoid duplicates by chave
+        if (!S.nfeHistory.find(n => n.chave === parsed.chave)) {
+          S.nfeHistory.push(parsed);
+        }
+        renderNfeHist();
+        openNfe(parsed.chave);
+        save();
+      }
+    };
+    reader.readAsText(f, 'UTF-8');
+  });
+}
+
+function parseNFe(xmlStr, filename) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlStr, 'application/xml');
+    const ns = 'http://www.portalfiscal.inf.br/nfe';
+    const g = (parent, tag) => parent?.getElementsByTagNameNS(ns, tag)?.[0]?.textContent?.trim() || '';
+
+    const nfeEl   = doc.getElementsByTagNameNS(ns, 'NFe')[0] || doc.getElementsByTagNameNS(ns, 'nfeProc')[0];
+    const ide     = doc.getElementsByTagNameNS(ns, 'ide')[0];
+    const emit    = doc.getElementsByTagNameNS(ns, 'emit')[0];
+    const enderEmit = doc.getElementsByTagNameNS(ns, 'enderEmit')[0];
+    const dets    = [...doc.getElementsByTagNameNS(ns, 'det')];
+
+    const dhEmi = g(ide, 'dhEmi') || g(ide, 'dEmi');
+    const dataNF = dhEmi ? dhEmi.slice(0,10) : '';
+    const prevEntrega = g(ide, 'dPrevEntrega') || '';
+
+    // Format date dd/mm/yyyy
+    const fmtDate = d => d ? d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4) : '';
+
+    const itens = dets.map(det => {
+      const prod = det.getElementsByTagNameNS(ns,'prod')[0];
+      return {
+        cProd:    g(prod, 'cProd'),
+        ean:      g(prod, 'cEAN'),
+        xProd:    g(prod, 'xProd'),
+        ncm:      g(prod, 'NCM'),
+        cfop:     g(prod, 'CFOP'),
+        unid:     g(prod, 'uCom'),
+        qtd:      parseFloat(g(prod, 'qCom')) || 0,
+        vUnit:    parseFloat(g(prod, 'vUnCom')) || 0,
+        vProd:    parseFloat(g(prod, 'vProd')) || 0,
+      };
+    });
+
+    const chave = doc.getElementsByTagNameNS(ns, 'chNFe')[0]?.textContent?.trim()
+      || doc.getElementsByTagNameNS(ns, 'Id')[0]?.textContent?.replace('NFe','')?.trim()
+      || filename;
+
+    return {
+      chave,
+      filename,
+      nNF:        g(ide, 'nNF'),
+      serie:      g(ide, 'serie'),
+      dataNF:     fmtDate(dataNF),
+      prevEntrega: fmtDate(prevEntrega),
+      emit: {
+        cnpj:    g(emit, 'CNPJ'),
+        razao:   g(emit, 'xNome'),
+        fantasia:g(emit, 'xFant'),
+        ie:      g(emit, 'IE'),
+        fone:    g(enderEmit, 'fone'),
+        uf:      g(enderEmit, 'UF'),
+        cidade:  g(enderEmit, 'xMun'),
+      },
+      itens,
+      vNF: itens.reduce((a,i)=>a+i.vProd,0),
+      importedAt: new Date().toISOString(),
+    };
+  } catch(e) {
+    toast('❌ Erro ao ler XML: '+e.message, 'error');
+    return null;
+  }
+}
+
+function renderNfeHist() {
+  const el = document.getElementById('nfeHist');
+  document.getElementById('nfe-hist-count').textContent = S.nfeHistory.length;
+  if (!S.nfeHistory.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:24px 16px"><div class="empty-icon" style="font-size:32px">📄</div><div class="empty-sub">Nenhuma NF-e importada ainda.</div></div>`;
+    return;
+  }
+  el.innerHTML = [...S.nfeHistory].reverse().map(n => `
+    <div class="nfe-hist-item ${S.activeNfe===n.chave?'active':''}" onclick="openNfe('${n.chave}')">
+      <div class="nfe-hist-name">${n.emit.fantasia||n.emit.razao}</div>
+      <div class="nfe-hist-sub">NF ${n.nNF}/${n.serie} · ${n.dataNF} · ${n.itens.length} itens</div>
+      <div class="nfe-hist-sub" style="color:#ce93d8">R$ ${n.vNF.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+    </div>`).join('');
+}
+
+function openNfe(chave) {
+  S.activeNfe = chave;
+  renderNfeHist();
+  const n = S.nfeHistory.find(x=>x.chave===chave);
+  if (!n) return;
+
+  // Check if fornecedor already registered
+  const fornExist = S.fornecedores.find(f=>f.cnpj===n.emit.cnpj||f.razaoSocial===n.emit.razao);
+
+  // Check which EANs match our stock
+  const estoqueEANs = new Set((S.estoqueRaw||[]).map(r=>r.ean));
+
+  const right = document.getElementById('nfeRight');
+  right.innerHTML = `
+    <div class="nfe-content">
+
+      <!-- Header card -->
+      <div class="nfe-header-card">
+        <div class="form-section-head" style="font-size:13px;padding:14px 20px">
+          📄 NF-e nº ${n.nNF} · Série ${n.serie}
+          <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:#ce93d8">
+            ${n.dataNF}
+          </span>
+        </div>
+        <div class="nfe-header-inner">
+          <div class="nfe-info-block">
+            <div class="nfe-info-label">Emitente</div>
+            <div class="nfe-info-val">${n.emit.razao}</div>
+            <div class="nfe-info-sub">${n.emit.fantasia ? n.emit.fantasia+' · ' : ''}CNPJ: ${fmtCNPJ(n.emit.cnpj)}</div>
+            <div class="nfe-info-sub">${n.emit.cidade||''}${n.emit.uf?' / '+n.emit.uf:''}</div>
+          </div>
+          <div class="nfe-info-block">
+            <div class="nfe-info-label">Data / Entrega Prevista</div>
+            <div class="nfe-info-val">${n.dataNF}</div>
+            <div class="nfe-info-sub">Prev. entrega: <strong style="color:var(--accent)">${n.prevEntrega||'—'}</strong></div>
+          </div>
+          <div class="nfe-info-block">
+            <div class="nfe-info-label">Valor Total NF</div>
+            <div class="nfe-info-val" style="color:var(--accent)">R$ ${n.vNF.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+            <div class="nfe-info-sub">${n.itens.length} itens · ${n.itens.reduce((a,i)=>a+i.qtd,0).toLocaleString('pt-BR')} unidades</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fornecedor status -->
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        ${fornExist
+          ? `<span style="font-family:var(--mono);font-size:11px;color:var(--accent)">✔ Fornecedor já cadastrado: <strong>${fornExist.razaoSocial}</strong></span>
+             <button class="btn btn-ghost" style="font-size:11px" onclick="switchView('fornecedores');openFornec('${fornExist.id}')">✏ Editar Fornecedor</button>`
+          : `<span style="font-family:var(--mono);font-size:11px;color:var(--orange)">⚠ Fornecedor não cadastrado ainda.</span>
+             <button class="btn btn-blue" style="font-size:11px" onclick="nfeCadastrarFornec('${chave}')">🏢 Cadastrar Fornecedor desta NF</button>`
+        }
+        <div style="flex:1"></div>
+        <button class="btn btn-primary" style="font-size:11px" onclick="nfeAtualizarCustos('${chave}')">
+          💰 Atualizar Custos Unitários (${n.itens.length} itens)
+        </button>
+      </div>
+
+      <!-- Items table -->
+      <div class="form-section">
+        <div class="form-section-head">📦 Itens da Nota Fiscal
+          <span style="margin-left:auto;font-size:10px;font-weight:400">
+            ${n.itens.filter(i=>estoqueEANs.has(i.ean)).length} de ${n.itens.length} EANs encontrados no estoque
+          </span>
+        </div>
+        <table class="nfe-items-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>EAN</th>
+              <th>Descrição</th>
+              <th>Cód. Prod.</th>
+              <th class="right">Qtd</th>
+              <th class="right">Vlr. Unit.</th>
+              <th class="right">Total</th>
+              <th>No Estoque</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${n.itens.map((it,i)=>`
+              <tr>
+                <td style="color:#8fa8cc;font-family:var(--mono);font-size:10px">${i+1}</td>
+                <td class="ean-cell">${it.ean}</td>
+                <td style="font-size:12px;font-weight:500;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${it.xProd}">${it.xProd}</td>
+                <td style="font-family:var(--mono);font-size:10px;color:#8fa8cc">${it.cProd}</td>
+                <td class="right">${it.qtd.toLocaleString('pt-BR')}</td>
+                <td class="right" style="color:var(--accent);font-weight:600">R$ ${it.vUnit.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+                <td class="right" style="font-family:var(--mono)">R$ ${it.vProd.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+                <td>
+                  ${estoqueEANs.has(it.ean)
+                    ? '<span class="match-badge match-yes">✔ Sim</span>'
+                    : '<span class="match-badge match-no">— Não</span>'}
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <div class="nfe-action-bar">
+      <div class="nfe-summary-chip">📦 <strong>${n.itens.length}</strong> itens</div>
+      <div class="nfe-summary-chip">✅ <strong>${n.itens.filter(i=>estoqueEANs.has(i.ean)).length}</strong> no estoque</div>
+      <div class="nfe-summary-chip">❌ <strong>${n.itens.filter(i=>!estoqueEANs.has(i.ean)).length}</strong> sem match</div>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" style="font-size:11px;color:var(--red);border-color:rgba(255,23,68,0.3)" onclick="nfeDelete('${chave}')">🗑 Remover NF</button>
+    </div>
+  `;
+}
+
+function fmtCNPJ(c) {
+  if (!c || c.length!==14) return c;
+  return `${c.slice(0,2)}.${c.slice(2,5)}.${c.slice(5,8)}/${c.slice(8,12)}-${c.slice(12)}`;
+}
+
+function nfeCadastrarFornec(chave) {
+  const n = S.nfeHistory.find(x=>x.chave===chave);
+  if (!n) return;
+  // Check again (may have been created since)
+  if (S.fornecedores.find(f=>f.cnpj===n.emit.cnpj)) {
+    toast('Fornecedor já cadastrado.',''); return;
+  }
+  const f = {
+    id: Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    razaoSocial: n.emit.razao,
+    cnpj: n.emit.cnpj,
+    contato: n.emit.fone,
+    categoriaCompra: 'Compras de Mercadorias para Revenda',
+    numeroParcelas: '1',
+    contaCorrente: '',
+    previsaoEntrega: n.prevEntrega||'',
+    leadTime: 30,
+    marcas: [],
+    custos: {},
+  };
+  S.fornecedores.push(f);
+  save();
+  renderFornecList();
+  toast(`✅ Fornecedor "${f.razaoSocial}" cadastrado com sucesso!`, 'success');
+  // Refresh the NF preview
+  openNfe(chave);
+}
+
+function nfeAtualizarCustos(chave) {
+  const n = S.nfeHistory.find(x=>x.chave===chave);
+  if (!n) return;
+
+  // Find the fornecedor by CNPJ or name
+  let forn = S.fornecedores.find(f=>f.cnpj===n.emit.cnpj||f.razaoSocial===n.emit.razao);
+  if (!forn) {
+    toast('⚠ Cadastre o fornecedor primeiro para salvar os custos.', 'error');
+    return;
+  }
+
+  if (!forn.custos) forn.custos = {};
+  let updated = 0;
+  for (const it of n.itens) {
+    if (it.ean && it.vUnit > 0) {
+      forn.custos[it.ean] = { vUnit: it.vUnit, xProd: it.xProd, cProd: it.cProd, updatedAt: n.dataNF };
+      updated++;
+    }
+  }
+
+  // Also update preço in any open requisições that have these EANs and this fornecedor
+  let reqUpdated = 0;
+  for (const req of S.requisicoes) {
+    if (req.fornecedorObj?.id === forn.id || req.fornecedor === forn.razaoSocial) {
+      for (const item of req.itens) {
+        const custo = forn.custos[item.ean];
+        if (custo && item.preco === 0) {
+          item.preco = custo.vUnit;
+          reqUpdated++;
+        }
+      }
+    }
+  }
+
+  save();
+  toast(`✅ ${updated} custos atualizados${reqUpdated>0?' · '+reqUpdated+' preços em requisições preenchidos':''}`, 'success');
+  openNfe(chave);
+}
+
+function nfeDelete(chave) {
+  if (!confirm('Remover esta NF-e do histórico?')) return;
+  S.nfeHistory = S.nfeHistory.filter(n=>n.chave!==chave);
+  S.activeNfe = null;
+  renderNfeHist();
+  document.getElementById('nfeRight').innerHTML = `<div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">NF removida</div></div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CATÁLOGO DE PRODUTOS
+// ═══════════════════════════════════════════════════════════════════
+
+function upsertCatalogo(items) {
+  const map = {};
+  S.catalogo.forEach(p => { map[p.ean] = p; });
+  items.forEach(item => {
+    if (!item.ean) return;
+    map[item.ean] = {
+      ...(map[item.ean] || {}),
+      ean:       item.ean,
+      desc:      item.desc      || map[item.ean]?.desc      || '',
+      marca:     item.marca     || map[item.ean]?.marca     || '',
+      ncm:       item.ncm       || map[item.ean]?.ncm       || '',
+      tipo:      item.tipo      || map[item.ean]?.tipo      || '',
+      estoque:   item.estoque   ?? map[item.ean]?.estoque   ?? 0,
+      qtdTotal:  item.qtdTotal  ?? map[item.ean]?.qtdTotal  ?? 0,
+      disponivel:item.disponivel?? map[item.ean]?.disponivel?? 0,
+      cmcTotal:  item.cmcTotal  ?? map[item.ean]?.cmcTotal  ?? 0,
+      updatedAt: new Date().toISOString(),
+    };
+  });
+  S.catalogo = Object.values(map);
+  S.catalogo.sort((a, b) => (a.desc || '').localeCompare(b.desc || ''));
+  save();
+  updateCatBadge();
+}
+
+function updateCatBadge() {
+  const el = document.getElementById('sb-prod-badge');
+  if (el) el.textContent = S.catalogo.length;
+}
+
+function sincronizarCatalogo() {
+  if (!S.estoqueRaw || !S.estoqueRaw.length) {
+    toast('⚠ Carregue o arquivo de estoque na aba Análise primeiro.', 'error');
+    return;
+  }
+  upsertCatalogo(S.estoqueRaw);
+  renderCatalogoFull();
+  toast('✅ Catálogo sincronizado — ' + S.estoqueRaw.length + ' SKUs atualizados.', 'success');
+}
+
+function dropCatalogo(e) {
+  e.preventDefault();
+  undrag('ua-catalogo');
+  const f = e.dataTransfer.files[0];
+  if (f) readXlsxCatalogo(f);
+}
+function loadCatalogo(input) {
+  if (input.files[0]) readXlsxCatalogo(input.files[0]);
+}
+function readXlsxCatalogo(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(e.target.result, { type: 'binary' });
+    const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: null });
+    const parsed = parseEstoque(raw);
+    if (!parsed.length) { toast('❌ Nenhum produto encontrado no arquivo.', 'error'); return; }
+    upsertCatalogo(parsed);
+    const st = document.getElementById('us-catalogo');
+    if (st) { st.className = 'upload-status ok'; st.textContent = '✓ ' + parsed.length + ' produtos importados'; }
+    document.getElementById('ua-catalogo').classList.add('loaded');
+    renderCatalogoFull();
+    toast('✅ ' + parsed.length + ' produtos importados para o catálogo.', 'success');
+  };
+  reader.readAsBinaryString(file);
+}
+
+function limparCatalogo() {
+  if (!S.catalogo.length) return;
+  if (!confirm('Remover todos os ' + S.catalogo.length + ' produtos do catálogo?')) return;
+  S.catalogo = [];
+  save();
+  updateCatBadge();
+  renderCatalogoFull();
+  toast('Catálogo limpo.', '');
+}
+
+function exportCatalogo() {
+  if (!S.catalogo.length) { toast('Catálogo vazio.', 'error'); return; }
+  const wb = XLSX.utils.book_new();
+  const rows = [['Código/EAN', 'Descrição', 'NCM', 'Tipo/SPED', 'Marca', 'Qtd Total', 'Qtd Disponível', 'CMC Total', 'Atualizado em']];
+  S.catalogo.forEach(p => rows.push([
+    p.ean, p.desc, p.ncm || '', p.tipo || '', p.marca,
+    p.qtdTotal || 0, p.disponivel || 0, p.cmcTotal || 0,
+    p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('pt-BR') : '',
+  ]));
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Catalogo');
+  XLSX.writeFile(wb, 'Catalogo_Supply_IQ_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+  toast('✅ Catálogo exportado.', 'success');
+}
+
+function catSort(col) {
+  if (S.catSortCol === col) S.catSortDir = (S.catSortDir || 1) * -1;
+  else { S.catSortCol = col; S.catSortDir = 1; }
+  renderCatalogo();
+}
+
+function renderCatalogoFull() {
+  buildProdMarcaList();
+  renderCatalogo();
+}
+
+function buildProdMarcaList() {
+  const el = document.getElementById('prodMarcaList');
+  if (!el) return;
+  const marcas = {};
+  S.catalogo.forEach(p => { if (p.marca) marcas[p.marca] = (marcas[p.marca] || 0) + 1; });
+  const sorted = Object.entries(marcas).sort((a, b) => b[1] - a[1]);
+  el.innerHTML =
+    `<div class="marca-item ${S.catMarcaFilter === '' ? 'active' : ''}" onclick="setCatMarca('')">
+      <span>Todas</span><span class="marca-count">${S.catalogo.length}</span></div>` +
+    sorted.map(([m, n]) =>
+      `<div class="marca-item ${S.catMarcaFilter === m ? 'active' : ''}" onclick="setCatMarca('${m.replace(/'/g, "\\'")}')">
+        <span>${m || '—'}</span><span class="marca-count">${n}</span></div>`
+    ).join('');
+}
+
+function setCatMarca(m) { S.catMarcaFilter = m; buildProdMarcaList(); renderCatalogo(); }
+
+function renderCatalogo() {
+  const q = (document.getElementById('catSearchBox')?.value || '').toLowerCase();
+  let f = S.catalogo.filter(p => {
+    if (S.catMarcaFilter && p.marca !== S.catMarcaFilter) return false;
+    if (q && !p.ean.toLowerCase().includes(q) && !p.desc.toLowerCase().includes(q) &&
+        !(p.marca || '').toLowerCase().includes(q) && !(p.ncm || '').includes(q)) return false;
+    return true;
+  });
+
+  const col = S.catSortCol || 'desc';
+  const dir = S.catSortDir || 1;
+  f.sort((a, b) => {
+    const va = a[col] ?? ''; const vb = b[col] ?? '';
+    if (typeof va === 'number') return (va - vb) * dir;
+    return String(va).localeCompare(String(vb)) * dir;
+  });
+
+  const info = document.getElementById('catToolbarInfo');
+  if (info) info.textContent = f.length + ' produto' + (f.length !== 1 ? 's' : '');
+
+  // KPIs
+  const all = S.catalogo;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('ckpi-total',  all.length || '—');
+  set('ckpi-marcas', all.length ? new Set(all.map(p => p.marca).filter(Boolean)).size : '—');
+  set('ckpi-stock',  all.length ? all.filter(p => (p.disponivel || 0) > 0).length : '—');
+  set('ckpi-zero',   all.length ? all.filter(p => (p.disponivel || 0) <= 0).length : '—');
+  const cmc = all.reduce((a, p) => a + (p.cmcTotal || 0), 0);
+  set('ckpi-cmc', all.length ? 'R$ ' + cmc.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '—');
+
+  const empty = document.getElementById('emptyCatalogo');
+  const table = document.getElementById('catTable');
+  const tbody = document.getElementById('catTableBody');
+
+  if (!S.catalogo.length) {
+    if (empty) empty.style.display = '';
+    if (table) table.style.display = 'none';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  if (table) table.style.display = '';
+  if (!tbody) return;
+
+  tbody.innerHTML = f.map(p => {
+    const disp  = p.disponivel ?? p.estoque ?? 0;
+    const tot   = p.qtdTotal ?? disp;
+    const cmc   = p.cmcTotal || 0;
+    const dispColor = disp > 0 ? 'color:var(--accent);font-weight:700' : 'color:var(--red);font-weight:700';
+    const badge = disp > 0
+      ? `<span class="badge b-ok"><span class="bd"></span>Em estoque</span>`
+      : `<span class="badge b-crit"><span class="bd bd-pulse"></span>Zerado</span>`;
+    return `<tr>
+      <td class="td-ean">${p.ean}</td>
+      <td class="td-desc" title="${(p.desc || '').replace(/"/g, '&quot;')}">${p.desc || '—'}</td>
+      <td style="font-family:var(--mono);font-size:10px;color:#8fa8cc;white-space:nowrap">${p.ncm || '—'}</td>
+      <td class="td-marca"><span class="marca-tag">${p.marca || '—'}</span></td>
+      <td class="td-num">${tot.toLocaleString('pt-BR')}</td>
+      <td class="td-num" style="${dispColor}">${disp.toLocaleString('pt-BR')}</td>
+      <td class="td-num" style="color:var(--yellow)">${cmc > 0 ? 'R$ ' + cmc.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '—'}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════════
+let toastTimer;
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show '+(type||'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ el.classList.remove('show'); }, 3500);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+load();
+renderFornecList();
+renderNfeHist();
+updateCatBadge();
+document.getElementById('sb-forn-badge').textContent = S.fornecedores.length;
+if(S.requisicoes.length>0) {
+  document.getElementById('sb-req-badge').style.display='';
+  document.getElementById('sb-req-badge').textContent = S.requisicoes.length;
+}
+</script>
+</body>
+</html>
