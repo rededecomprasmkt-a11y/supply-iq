@@ -864,7 +864,7 @@ td:last-child { border-right: none; }
 
       <!-- Toolbar -->
       <div class="toolbar">
-        <input class="search-input" type="text" autocomplete="off" id="searchBox" placeholder="🔍  Buscar EAN, produto ou marca…" oninput="applyFilters()" autocomplete="off">
+        <input class="search-input" type="search" id="searchBox" name="q_analysis" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="🔍  Buscar EAN, produto ou marca…" oninput="this._typed=true;applyFilters()">
         <button class="btn btn-orange" onclick="addSelectedToReq()" id="btnAddReq" style="display:none">
           ➕ Adicionar à Requisição
         </button>
@@ -1034,6 +1034,7 @@ async function switchView(v) {
   // Mark body with current view for CSS targeting
   document.body.className = document.body.className.replace(/(^|\s)view-\S+/g, '').trim();
   document.body.classList.add('view-' + v);
+  if (v === 'analysis') { const sb = document.getElementById('searchBox'); if(sb && sb.value && !sb._typed) sb.value=''; }
   if (v === 'requisicoes') renderReqList();
   if (v === 'fornecedores') renderFornecList();
   if (v === 'nfe') renderNfeHist();
@@ -2447,25 +2448,28 @@ function save(key) {
         delete syncQueue[k];
         const data = k==='fornecedores'?S.fornecedores:k==='requisicoes'?S.requisicoes:k==='nfe'?S.nfeHistory:S.catalogo;
         const action = k==='fornecedores'?'saveFornecedores':k==='requisicoes'?'saveRequisicoes':k==='nfe'?'saveNfe':'saveCatalogo';
-        // Verifica tamanho — Apps Script tem limite de ~45KB por célula
         const json = JSON.stringify(data);
-        if (json.length > 40000 && k === 'catalogo') {
-          // Salva em partes de 200 itens para não exceder limite
-          const CHUNK = 200;
+        // Sempre usa chunks para catálogo (limite seguro: 50 itens ~8KB por chunk)
+        if (k === 'catalogo') {
+          const CHUNK = 50;
+          const total = data.length;
+          toast('💾 Salvando catálogo (' + total + ' itens)…', '');
           for (let i = 0; i < data.length; i += CHUNK) {
             const chunk = data.slice(i, i + CHUNK);
-            const isFirst = i === 0;
-            await gasCall('saveCatalogoChunk', {data: chunk, offset: i, total: data.length, replace: isFirst});
+            const r = await gasCall('saveCatalogoChunk', {data: chunk, offset: i, total, replace: i === 0});
+            if (!r.ok) throw new Error('Chunk ' + i + ' falhou: ' + (r.error||'?'));
           }
+          toast('✅ Catálogo salvo no servidor (' + total + ' itens)', 'success');
         } else {
-          await gasCall(action, {data});
+          const r = await gasCall(action, {data});
+          if (!r.ok) throw new Error('Erro ao salvar ' + k + ': ' + (r.error||'?'));
         }
       }
       setSyncDot('ok');
     } catch(e) {
       console.error('Sync error:', e);
       setSyncDot('error');
-      toast('⚠ Erro ao salvar no servidor', 'error');
+      toast('❌ Erro ao salvar: ' + e.message, 'error');
     }
   }, 1200);
 }
@@ -2816,7 +2820,7 @@ appInit();
 
       <!-- Toolbar -->
       <div class="toolbar">
-        <input class="search-input" type="text" autocomplete="off" id="catSearchBox" placeholder="🔍  Buscar código, descrição, marca ou NCM…" oninput="renderCatalogo()" autocomplete="off">
+        <input class="search-input" type="search" id="catSearchBox" name="q_catalog" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="🔍  Buscar código, descrição, marca ou NCM…" oninput="renderCatalogo()">
         <button class="btn btn-ghost" onclick="exportCatalogo()" style="font-size:11px">📥 Exportar XLSX</button>
         <button class="btn btn-red" onclick="limparCatalogo()" style="font-size:11px">🗑 Limpar</button>
         <span class="toolbar-info" id="catToolbarInfo">0 produtos</span>
