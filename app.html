@@ -2272,7 +2272,22 @@ function catSort(col) {
   renderCatalogo();
 }
 
-function renderCatalogoFull() {
+async function renderCatalogoFull() {
+  // Sempre busca a versão mais recente do servidor antes de renderizar
+  const syncing = document.getElementById('catSyncStatus');
+  if (syncing) { syncing.style.display = 'flex'; }
+  try {
+    const result = await gasCall('getCatalogo');
+    if (result.ok && Array.isArray(result.data) && result.data.length > 0) {
+      S.catalogo = result.data;
+      saveLocal();
+    }
+  } catch(e) {
+    // Usa cache local se servidor falhar
+    console.warn('Catálogo: usando cache local —', e.message);
+  } finally {
+    if (syncing) { syncing.style.display = 'none'; }
+  }
   buildProdMarcaList();
   renderCatalogo();
 }
@@ -2740,7 +2755,13 @@ appInit();
 
     <!-- Left Panel -->
     <div class="analysis-left" style="width:240px">
-      <div class="panel-head" style="color:#00bcd4">🗂 Catálogo de Produtos</div>
+      <div class="panel-head" style="color:#00bcd4;justify-content:space-between">
+        <span>🗂 Catálogo de Produtos</span>
+        <span id="catSyncStatus" style="display:none;align-items:center;gap:5px;font-size:9px;color:#8fa8cc;font-family:var(--mono);font-weight:400;letter-spacing:0">
+          <span style="width:8px;height:8px;border:2px solid #8fa8cc;border-top-color:transparent;border-radius:50%;animation:sp .6s linear infinite;display:inline-block"></span>
+          atualizando…
+        </span>
+      </div>
 
       <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
         <div class="param-label" style="margin-bottom:6px">Sincronizar</div>
