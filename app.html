@@ -1239,7 +1239,7 @@ function switchView(v) {
   const sidebar = document.getElementById('mainSidebar');
   if (sidebar) sidebar.style.display = (v === 'analysis') ? '' : 'none';
   // Mark body with current view for CSS targeting
-  document.body.className = document.body.className.replace(/view-\w+/g, '').trim();
+  document.body.className = document.body.className.replace(/(^|\s)view-\S+/g, '').trim();
   document.body.classList.add('view-' + v);
   if (v === 'requisicoes') renderReqList();
   if (v === 'fornecedores') renderFornecList();
