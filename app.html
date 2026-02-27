@@ -947,8 +947,8 @@ td:last-child { border-right: none; }
 </div><!-- NF-e view end -->
 
 <!-- ═══ CATÁLOGO DE PRODUTOS VIEW ═══ -->
-<div class="view" id="view-produtos">
-  <div class="analysis-layout">
+<div class="view" id="view-produtos" style="height:100%">
+  <div class="analysis-layout" style="height:100%">
 
     <!-- Left Panel -->
     <div class="analysis-left">
@@ -1002,7 +1002,7 @@ td:last-child { border-right: none; }
       </div>
 
       <!-- Table -->
-      <div class="table-wrap">
+      <div class="table-wrap" style="flex:1;overflow:auto">
         <div class="empty-state" id="emptyCatalogo">
           <div class="empty-icon">🗂</div>
           <div class="empty-title">Catálogo vazio</div>
@@ -2313,7 +2313,7 @@ function upsertCatalogo(items) {
   });
   S.catalogo = Object.values(map);
   S.catalogo.sort((a, b) => (a.desc || '').localeCompare(b.desc || ''));
-  save();
+  save('catalogo');
   updateCatBadge();
 }
 
@@ -2542,7 +2542,19 @@ function save(key) {
         delete syncQueue[k];
         const data = k==='fornecedores'?S.fornecedores:k==='requisicoes'?S.requisicoes:k==='nfe'?S.nfeHistory:S.catalogo;
         const action = k==='fornecedores'?'saveFornecedores':k==='requisicoes'?'saveRequisicoes':k==='nfe'?'saveNfe':'saveCatalogo';
-        await gasCall(action, {data});
+        // Verifica tamanho — Apps Script tem limite de ~45KB por célula
+        const json = JSON.stringify(data);
+        if (json.length > 40000 && k === 'catalogo') {
+          // Salva em partes de 200 itens para não exceder limite
+          const CHUNK = 200;
+          for (let i = 0; i < data.length; i += CHUNK) {
+            const chunk = data.slice(i, i + CHUNK);
+            const isFirst = i === 0;
+            await gasCall('saveCatalogoChunk', {data: chunk, offset: i, total: data.length, replace: isFirst});
+          }
+        } else {
+          await gasCall(action, {data});
+        }
       }
       setSyncDot('ok');
     } catch(e) {
