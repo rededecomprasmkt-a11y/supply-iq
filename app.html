@@ -94,15 +94,18 @@ body {
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  gap: 16px;
+  padding: 0 14px;
+  gap: 10px;
   flex-shrink: 0;
   z-index: 50;
+  overflow: hidden;
+  min-width: 0;
 }
 .header-logo {
   display: flex; align-items: center; gap: 10px;
-  font-size: 16px; font-weight: 800;
+  font-size: 15px; font-weight: 800;
   letter-spacing: -0.3px;
+  flex-shrink: 0;
 }
 .header-logo .dot { color: var(--accent); }
 .logo-badge {
@@ -114,11 +117,18 @@ body {
   border-radius: 4px;
   letter-spacing: 1px;
 }
-.header-sep { flex: 1; }
+.header-sep { flex: 0 0 0; }
 .nav-tabs {
   display: flex;
-  gap: 4px;
+  gap: 3px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  min-width: 0;
+  flex: 1;
 }
+.nav-tabs::-webkit-scrollbar { display: none; }
 .nav-tab {
   background: none;
   border: 1px solid transparent;
@@ -126,11 +136,13 @@ body {
   color: var(--text2);
   cursor: pointer;
   font-family: var(--sans);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 6px 14px;
+  padding: 5px 10px;
   transition: all 0.15s;
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .nav-tab:hover { border-color: var(--border2); color: var(--text); }
 .nav-tab.active {
@@ -660,7 +672,7 @@ td:last-child { border-right: none; }
 .nfe-summary-chip strong { color: var(--text); }
 
 /* ── AUTH/USER ── */
-.header-right { display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:auto; }
+.header-right { display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:8px; }
 .user-chip { display:flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:4px 12px 4px 4px; }
 .user-avatar { width:26px; height:26px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:flex; align-items:center; justify-content:center; font-size:11px; color:#000; font-weight:700; overflow:hidden; flex-shrink:0; }
 .user-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
@@ -1206,7 +1218,8 @@ function switchView(v) {
   document.getElementById('tab-'+v).classList.add('active');
   // Esconde sidebar nas views que têm painel lateral próprio
   const sidebar = document.querySelector('.sidebar');
-  if (sidebar) sidebar.style.display = ['analysis','requisicoes','fornecedores','nfe','produtos'].includes(v) && v!=='produtos' ? '' : 'none';
+  // Show sidebar only for analysis view (others have their own left panels)
+  if (sidebar) sidebar.style.display = (v === 'analysis') ? '' : 'none';
   if (v === 'requisicoes') renderReqList();
   if (v === 'fornecedores') renderFornecList();
   if (v === 'nfe') renderNfeHist();
