@@ -617,6 +617,24 @@ td:last-child { border-right: none; }
 }
 .nfe-summary-chip strong { color: var(--text); }
 
+/* ── AUTH/USER ── */
+.header-right { display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:auto; }
+.user-chip { display:flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--border); border-radius:20px; padding:4px 12px 4px 4px; }
+.user-avatar { width:26px; height:26px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:flex; align-items:center; justify-content:center; font-size:11px; color:#000; font-weight:700; overflow:hidden; flex-shrink:0; }
+.user-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.user-name { font-size:11px; font-weight:600; color:var(--text2); }
+.btn-logout { background:var(--red-dim); border:1px solid rgba(255,23,68,.25); border-radius:7px; color:var(--red); cursor:pointer; font-family:var(--sans); font-size:11px; font-weight:600; padding:5px 10px; transition:all .15s; }
+.btn-logout:hover { background:var(--red); color:#fff; }
+.sync-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); flex-shrink:0; transition:all .3s; }
+.sync-dot.syncing { animation:syncpulse .8s ease-in-out infinite; background:var(--yellow); }
+.sync-dot.error { background:var(--red); }
+@keyframes syncpulse { 0%,100%{opacity:1}50%{opacity:.3} }
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:998; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal-box { background:var(--panel2); border:1px solid var(--border2); border-radius:14px; padding:22px; max-width:460px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+.modal-title { font-size:15px; font-weight:800; margin-bottom:16px; }
+.modal-actions { display:flex; gap:9px; justify-content:flex-end; margin-top:18px; }
+
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -642,6 +660,15 @@ td:last-child { border-right: none; }
     <button class="nav-tab tab-blue" onclick="switchView('fornecedores')" id="tab-fornecedores">🏢 Fornecedores</button>
     <button class="nav-tab tab-purple" onclick="switchView('nfe')" id="tab-nfe">📄 Importar NF-e XML</button>
     <button class="nav-tab tab-teal" onclick="switchView('produtos')" id="tab-produtos">🗂 Catálogo</button>
+    <button class="nav-tab" onclick="switchView('usuarios')" id="tab-usuarios" style="display:none">👥 Usuários</button>
+  </div>
+  <div class="header-right">
+    <div class="sync-dot" id="syncDot" title="Sincronizado"></div>
+    <div class="user-chip">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <span class="user-name" id="userName">…</span>
+    </div>
+    <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
 </div>
 
@@ -682,6 +709,10 @@ td:last-child { border-right: none; }
   </div>
   <div class="sidebar-item" onclick="setStatus('sem')">
     <span class="icon">⚫</span> Sem Venda
+  </div>
+  <div class="sidebar-section" id="sb-admin-section" style="display:none">Admin</div>
+  <div class="sidebar-item" id="sb-usuarios" onclick="switchView('usuarios')" style="display:none">
+    <span class="icon">👥</span> Usuários
   </div>
 </div>
 
@@ -998,11 +1029,52 @@ td:last-child { border-right: none; }
   </div>
 </div>
 
+<!-- ═══ USUÁRIOS VIEW ═══ -->
+<div class="view" id="view-usuarios">
+  <div style="flex:1;overflow-y:auto;padding:28px 32px;max-width:700px;margin:0 auto;width:100%">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div style="font-size:20px;font-weight:800">👥 Gerenciar Usuários</div>
+        <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-top:3px">Usuários com acesso via email/senha</div>
+      </div>
+      <button class="btn btn-primary" onclick="abrirModalNovoUsuario()">＋ Novo Usuário</button>
+    </div>
+    <div id="usuariosList" style="display:flex;flex-direction:column;gap:10px">
+      <div style="text-align:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:12px">⏳ Carregando…</div>
+    </div>
+  </div>
+</div>
+
 </div><!-- .main -->
 </div><!-- .layout -->
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- Modal Novo Usuário -->
+<div class="modal-overlay" id="modalNovoUsuario">
+  <div class="modal-box">
+    <div class="modal-title">👤 Novo Usuário</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Nome</div>
+        <input style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--sans);font-size:13px;padding:8px 10px;outline:none;transition:border-color .15s" id="nu-nome" placeholder="Nome completo">
+      </div>
+      <div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Email</div>
+        <input style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--sans);font-size:13px;padding:8px 10px;outline:none;transition:border-color .15s" id="nu-email" type="email" placeholder="usuario@email.com">
+      </div>
+      <div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Senha</div>
+        <input style="width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--sans);font-size:13px;padding:8px 10px;outline:none;transition:border-color .15s" id="nu-senha" type="password" placeholder="Mínimo 6 caracteres">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" style="background:var(--panel);border:1px solid var(--border);color:var(--text2)" onclick="fecharModalNovoUsuario()">Cancelar</button>
+      <button class="btn btn-primary" onclick="criarUsuario()">✔ Criar Usuário</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ═══════════════════════════════════════════════════════════════════
@@ -1068,23 +1140,7 @@ const S = {
 
 const Z_MAP = { 0.80:0.842, 0.85:1.036, 0.90:1.282, 0.95:1.645, 0.99:2.326 };
 
-// Persist
-function save() {
-  try {
-    localStorage.setItem('siq_fornec', JSON.stringify(S.fornecedores));
-    localStorage.setItem('siq_req', JSON.stringify(S.requisicoes));
-    localStorage.setItem('siq_nfe', JSON.stringify(S.nfeHistory));
-    localStorage.setItem('siq_catalogo', JSON.stringify(S.catalogo));
-  } catch(e) {}
-}
-function load() {
-  try {
-    S.fornecedores = JSON.parse(localStorage.getItem('siq_fornec') || '[]');
-    S.requisicoes = JSON.parse(localStorage.getItem('siq_req') || '[]');
-    S.nfeHistory = JSON.parse(localStorage.getItem('siq_nfe') || '[]');
-    S.catalogo = JSON.parse(localStorage.getItem('siq_catalogo') || '[]');
-  } catch(e) {}
-}
+// Persist — replaced by GAS backend (see INIT section below)
 
 // ═══════════════════════════════════════════════════════════════════
 // NAVIGATION
@@ -1099,6 +1155,7 @@ function switchView(v) {
   if (v === 'fornecedores') renderFornecList();
   if (v === 'nfe') renderNfeHist();
   if (v === 'produtos') renderCatalogoFull();
+  if (v === 'usuarios') renderUsuarios();
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2431,17 +2488,239 @@ function toast(msg, type='') {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// BACKEND — Google Apps Script
+// ═══════════════════════════════════════════════════════════════════
+const GAS_URL    = 'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR-ACvly_bkHKyJNhGjheype-pnGkx2hn9alpRDtOnLNx5Ojvog/exec';
+const SECRET_KEY = 'supplyiq2026';
+
+function gasCall(action, extra={}) {
+  const payload = { action, key: SECRET_KEY, ...extra };
+  const readActions = ['login','getUsuarios','getFornecedores','getRequisicoes','getNfe','getAllData','getCatalogo'];
+  if (readActions.includes(action)) {
+    const qs = new URLSearchParams({ key: SECRET_KEY, action, payload: JSON.stringify(payload) }).toString();
+    return fetch(GAS_URL + '?' + qs, { redirect: 'follow' })
+      .then(r => r.text()).then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,100)); } });
+  }
+  return fetch(GAS_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(payload),
+    redirect: 'follow'
+  }).then(r => r.text()).then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,100)); } });
+}
+
+function setSyncDot(state) {
+  const d = document.getElementById('syncDot');
+  if (!d) return;
+  d.className = 'sync-dot' + (state==='syncing'?' syncing':state==='error'?' error':'');
+  d.title = state==='syncing'?'Salvando…':state==='error'?'Erro ao salvar':'Salvo ✓';
+}
+
+// ── Save/load with GAS sync ──────────────────────────────────────
+let syncTimer = null;
+const syncQueue = {};
+
+function saveLocal() {
+  try {
+    localStorage.setItem('siq_fornec', JSON.stringify(S.fornecedores));
+    localStorage.setItem('siq_req', JSON.stringify(S.requisicoes));
+    localStorage.setItem('siq_nfe', JSON.stringify(S.nfeHistory));
+    localStorage.setItem('siq_catalogo', JSON.stringify(S.catalogo));
+  } catch(e) {}
+}
+
+function save(key) {
+  saveLocal();
+  if (key) syncQueue[key] = true;
+  else { syncQueue.fornecedores=true; syncQueue.requisicoes=true; syncQueue.nfe=true; syncQueue.catalogo=true; }
+  setSyncDot('syncing');
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    try {
+      const keys = Object.keys(syncQueue);
+      for (const k of keys) {
+        delete syncQueue[k];
+        const data = k==='fornecedores'?S.fornecedores:k==='requisicoes'?S.requisicoes:k==='nfe'?S.nfeHistory:S.catalogo;
+        const action = k==='fornecedores'?'saveFornecedores':k==='requisicoes'?'saveRequisicoes':k==='nfe'?'saveNfe':'saveCatalogo';
+        await gasCall(action, {data});
+      }
+      setSyncDot('ok');
+    } catch(e) {
+      console.error('Sync error:', e);
+      setSyncDot('error');
+      toast('⚠ Erro ao salvar no servidor', 'error');
+    }
+  }, 1200);
+}
+
+function load() {
+  try {
+    S.fornecedores = JSON.parse(localStorage.getItem('siq_fornec') || '[]');
+    S.requisicoes  = JSON.parse(localStorage.getItem('siq_req')    || '[]');
+    S.nfeHistory   = JSON.parse(localStorage.getItem('siq_nfe')    || '[]');
+    S.catalogo     = JSON.parse(localStorage.getItem('siq_catalogo')|| '[]');
+  } catch(e) {}
+}
+
+// ── SHA-256 ──────────────────────────────────────────────────────
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── Auth / Session ───────────────────────────────────────────────
+function logout() {
+  if (!confirm('Sair da conta?')) return;
+  sessionStorage.clear();
+  window.location.href = 'index.html';
+}
+
+// ── Usuários ─────────────────────────────────────────────────────
+async function loadUsuarios() {
+  try { const r = await gasCall('getUsuarios'); return r.ok ? (r.data||[]) : []; } catch(e) { return []; }
+}
+
+async function saveUsuarios(lista) {
+  const r = await gasCall('saveUsuarios', {data: lista});
+  if (!r.ok) throw new Error(r.error || 'Erro ao salvar');
+}
+
+async function renderUsuarios() {
+  const el = document.getElementById('usuariosList');
+  el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-family:var(--mono);font-size:11px">⏳ Carregando…</div>';
+  const lista = await loadUsuarios();
+  if (!lista.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:11px">Nenhum usuário cadastrado.</div>';
+    return;
+  }
+  el.innerHTML = lista.map(u => `
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px">
+      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),#7c4dff);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">${(u.nome||u.email)[0].toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700">${u.nome||'—'}</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text2)">${u.email}</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3)">${u.role||'user'} · ${u.criadoEm?new Date(u.criadoEm).toLocaleDateString('pt-BR'):'-'}</div>
+      </div>
+      <span style="font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:5px;${u.ativo===false?'background:var(--red-dim);color:var(--red);border:1px solid rgba(255,23,68,.3)':'background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,230,118,.3)'}">${u.ativo===false?'INATIVO':'ATIVO'}</span>
+      <button class="btn" style="font-size:11px;padding:5px 10px;background:var(--panel);border:1px solid var(--border);color:var(--text2)" onclick="toggleUsuario('${u.email}')">${u.ativo===false?'Ativar':'Desativar'}</button>
+      <button class="btn" style="font-size:11px;padding:5px 10px;background:var(--red-dim);border:1px solid rgba(255,23,68,.3);color:var(--red)" onclick="deletarUsuario('${u.email}')">🗑</button>
+    </div>`).join('');
+}
+
+function abrirModalNovoUsuario() {
+  document.getElementById('nu-nome').value='';
+  document.getElementById('nu-email').value='';
+  document.getElementById('nu-senha').value='';
+  document.getElementById('modalNovoUsuario').classList.add('show');
+  setTimeout(()=>document.getElementById('nu-nome').focus(),100);
+}
+function fecharModalNovoUsuario() { document.getElementById('modalNovoUsuario').classList.remove('show'); }
+
+async function criarUsuario() {
+  const nome  = document.getElementById('nu-nome').value.trim();
+  const email = document.getElementById('nu-email').value.trim().toLowerCase();
+  const senha = document.getElementById('nu-senha').value;
+  if (!nome||!email||!senha) { toast('⚠ Preencha todos os campos','error'); return; }
+  if (senha.length < 6) { toast('⚠ Senha deve ter 6+ caracteres','error'); return; }
+  try {
+    const lista = await loadUsuarios();
+    if (lista.find(u=>u.email===email)) { toast('⚠ Email já cadastrado','error'); return; }
+    const hash = await sha256(senha);
+    lista.push({nome, email, senha:hash, role:'user', ativo:true, criadoEm:new Date().toISOString()});
+    await saveUsuarios(lista);
+    fecharModalNovoUsuario();
+    renderUsuarios();
+    toast(`✅ Usuário "${nome}" criado!`,'success');
+  } catch(e) { toast('❌ '+e.message,'error'); }
+}
+
+async function deletarUsuario(email) {
+  if (!confirm(`Excluir ${email}?`)) return;
+  try {
+    let lista = await loadUsuarios();
+    lista = lista.filter(u=>u.email!==email);
+    await saveUsuarios(lista);
+    renderUsuarios();
+    toast('Usuário removido','');
+  } catch(e) { toast('❌ '+e.message,'error'); }
+}
+
+async function toggleUsuario(email) {
+  try {
+    const lista = await loadUsuarios();
+    const u = lista.find(x=>x.email===email);
+    if (u) u.ativo = u.ativo===false;
+    await saveUsuarios(lista);
+    renderUsuarios();
+    toast(u?.ativo?'Usuário ativado':'Usuário desativado','');
+  } catch(e) { toast('❌ '+e.message,'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════
-load();
-renderFornecList();
-renderNfeHist();
-updateCatBadge();
-document.getElementById('sb-forn-badge').textContent = S.fornecedores.length;
-if(S.requisicoes.length>0) {
-  document.getElementById('sb-req-badge').style.display='';
-  document.getElementById('sb-req-badge').textContent = S.requisicoes.length;
+async function appInit() {
+  // Check session
+  const token = sessionStorage.getItem('gapi_token');
+  const userStr = sessionStorage.getItem('gapi_user');
+  if (!token || !userStr) { window.location.href='index.html'; return; }
+
+  // Show user info
+  try {
+    const u = JSON.parse(userStr);
+    document.getElementById('userName').textContent = u.name||u.email||'Usuário';
+    const av = document.getElementById('userAvatar');
+    if (u.picture) { av.innerHTML=`<img src="${u.picture}" alt="">`; }
+    else { av.textContent=(u.name||'U')[0].toUpperCase(); }
+    // Admin só: aba de usuários
+    if (u.role==='admin') {
+      document.getElementById('tab-usuarios').style.display='';
+      document.getElementById('sb-usuarios').style.display='';
+      document.getElementById('sb-admin-section').style.display='';
+    }
+  } catch(e) {}
+
+  // Load local cache first (instant display)
+  load();
+  renderFornecList();
+  renderNfeHist();
+  updateCatBadge();
+  document.getElementById('sb-forn-badge').textContent = S.fornecedores.length;
+  if (S.requisicoes.length>0) {
+    document.getElementById('sb-req-badge').style.display='';
+    document.getElementById('sb-req-badge').textContent = S.requisicoes.length;
+  }
+
+  // Then sync from GAS in background
+  setSyncDot('syncing');
+  try {
+    const result = await gasCall('getAllData');
+    if (result.ok) {
+      if (Array.isArray(result.fornecedores)) S.fornecedores = result.fornecedores;
+      if (Array.isArray(result.requisicoes))  S.requisicoes  = result.requisicoes;
+      if (Array.isArray(result.nfe))          S.nfeHistory   = result.nfe;
+      if (Array.isArray(result.catalogo))     S.catalogo     = result.catalogo;
+      saveLocal();
+      renderFornecList();
+      renderNfeHist();
+      updateCatBadge();
+      document.getElementById('sb-forn-badge').textContent = S.fornecedores.length;
+      if (S.requisicoes.length>0) {
+        document.getElementById('sb-req-badge').style.display='';
+        document.getElementById('sb-req-badge').textContent = S.requisicoes.length;
+      }
+      setSyncDot('ok');
+    } else {
+      throw new Error(result.error||'Erro GAS');
+    }
+  } catch(e) {
+    console.error('GAS load error:', e);
+    setSyncDot('error');
+    toast('⚠ Usando dados locais — servidor indisponível','');
+  }
 }
+
+appInit();
 </script>
 </body>
 </html>
