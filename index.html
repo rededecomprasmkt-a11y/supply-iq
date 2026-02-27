@@ -135,7 +135,7 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
 //  ⚙️  CONFIGURAÇÃO DO BACKEND (Google Apps Script)
 //  Cole aqui a URL do seu Web App após o deploy
 // ═══════════════════════════════════════════════════════
-const GAS_URL    = localStorage.getItem('siq_gas_url') || '';
+const GAS_URL    = 'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR-ACvly_bkHKyJNhGjheype-pnGkx2hn9alpRDtOnLNx5Ojvog/exec'; // URL fixa — não precisa configurar
 const SECRET_KEY = 'supplyiq2026'; // Deve ser igual ao do Apps Script
 
 // ─── SHA-256 ───────────────────────────────────────────
@@ -163,7 +163,7 @@ function hideError(){document.getElementById('errorMsg').style.display='none';}
 
 // ─── Chamada ao Google Apps Script ────────────────────
 async function gasCall(action, extra={}){
-  const url = localStorage.getItem('siq_gas_url');
+  const url = 'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR-ACvly_bkHKyJNhGjheype-pnGkx2hn9alpRDtOnLNx5Ojvog/exec';
   if(!url) throw new Error('URL do backend não configurada. Configure em Ajustes.');
   const resp = await fetch(url, {
     method: 'POST',
@@ -180,7 +180,7 @@ async function loginSenha(){
   const senha = document.getElementById('inputSenha').value;
   if(!email||!senha){showError('Preencha email e senha.');return;}
 
-  const gasUrl = localStorage.getItem('siq_gas_url');
+  const gasUrl = 'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR-ACvly_bkHKyJNhGjheype-pnGkx2hn9alpRDtOnLNx5Ojvog/exec';
   if(!gasUrl){
     hideError();
     // Mostra painel de configuração
@@ -217,8 +217,8 @@ async function loginSenha(){
 function salvarGasUrl(){
   const url = document.getElementById('inputGasUrl').value.trim();
   if(!url.startsWith('https://')){showError('URL inválida.');return;}
-  localStorage.setItem('siq_gas_url', url);
-  sessionStorage.setItem('siq_gas_url', url);
+  localStorage.setItem('siq_gas_url', 'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR-ACvly_bkHKyJNhGjheype-pnGkx2hn9alpRDtOnLNx5Ojvog/exec');
+  sessionStorage.setItem('siq_gas_url', 'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR-ACvly_bkHKyJNhGjheype-pnGkx2hn9alpRDtOnLNx5Ojvog/exec');
   document.getElementById('panel-setup').style.display='none';
   document.getElementById('panel-senha').style.display='';
   hideError();
@@ -232,7 +232,7 @@ window.onload = function(){
     showLoading('Retomando sessão…');window.location.href='app.html';return;
   }
   // Mostra campo de URL se ainda não configurado
-  if(!localStorage.getItem('siq_gas_url')){
+  if(!'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR-ACvly_bkHKyJNhGjheype-pnGkx2hn9alpRDtOnLNx5Ojvog/exec'){
     document.getElementById('panel-setup').style.display='';
     document.getElementById('panel-senha').style.display='none';
   } else {
@@ -255,7 +255,7 @@ async function handleToken(resp){
     const u = await r.json();
     sessionStorage.setItem('gapi_token', token);
     sessionStorage.setItem('gapi_user', JSON.stringify({name:u.name,email:u.email,picture:u.picture,role:'admin'}));
-    const gasUrl = localStorage.getItem('siq_gas_url');
+    const gasUrl = 'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR-ACvly_bkHKyJNhGjheype-pnGkx2hn9alpRDtOnLNx5Ojvog/exec';
     if(gasUrl) sessionStorage.setItem('siq_gas_url', gasUrl);
   }catch(e){
     sessionStorage.setItem('gapi_token',token);

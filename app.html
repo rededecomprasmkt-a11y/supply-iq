@@ -431,7 +431,7 @@ const S={
 const SECRET_KEY = 'supplyiq2026'; // Igual ao do Apps Script
 
 function gasUrl(){
-  return sessionStorage.getItem('siq_gas_url') || localStorage.getItem('siq_gas_url') || '';
+  return 'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR-ACvly_bkHKyJNhGjheype-pnGkx2hn9alpRDtOnLNx5Ojvog/exec';
 }
 
 async function gasCall(action, extra={}){
@@ -493,9 +493,9 @@ async function driveInit(){
       document.getElementById('tab-usuarios').style.display='';
       document.getElementById('sb-usuarios').style.display='';
     }
-    // Garante que a URL do GAS está disponível na sessão
-    const savedGasUrl = localStorage.getItem('siq_gas_url');
-    if(savedGasUrl) sessionStorage.setItem('siq_gas_url', savedGasUrl);
+    // URL embutida
+    localStorage.setItem('siq_gas_url', 'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR-ACvly_bkHKyJNhGjheype-pnGkx2hn9alpRDtOnLNx5Ojvog/exec');
+    sessionStorage.setItem('siq_gas_url', 'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR-ACvly_bkHKyJNhGjheype-pnGkx2hn9alpRDtOnLNx5Ojvog/exec');
   }catch(e){}
 
   setSyncDot('syncing');
