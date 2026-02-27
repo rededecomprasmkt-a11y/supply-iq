@@ -1020,7 +1020,7 @@ const Z_MAP = { 0.80:0.842, 0.85:1.036, 0.90:1.282, 0.95:1.645, 0.99:2.326 };
 // ═══════════════════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════════
-function switchView(v) {
+async function switchView(v) {
   document.querySelectorAll('.view').forEach(el => { el.classList.remove('active'); el.style.display = 'none'; });
   document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
@@ -1037,7 +1037,7 @@ function switchView(v) {
   if (v === 'requisicoes') renderReqList();
   if (v === 'fornecedores') renderFornecList();
   if (v === 'nfe') renderNfeHist();
-  if (v === 'produtos') renderCatalogoFull();
+  if (v === 'produtos') await renderCatalogoFull();
   if (v === 'usuarios') renderUsuarios();
 }
 
@@ -2278,13 +2278,17 @@ async function renderCatalogoFull() {
   if (syncing) { syncing.style.display = 'flex'; }
   try {
     const result = await gasCall('getCatalogo');
-    if (result.ok && Array.isArray(result.data) && result.data.length > 0) {
+    if (result.ok && Array.isArray(result.data)) {
+      // Sempre atualiza com a versão do servidor (mesmo que vazia)
       S.catalogo = result.data;
       saveLocal();
+    } else if (!result.ok) {
+      throw new Error(result.error || 'Erro ao buscar catálogo');
     }
   } catch(e) {
     // Usa cache local se servidor falhar
     console.warn('Catálogo: usando cache local —', e.message);
+    toast('⚠ Catálogo: usando dados locais — ' + e.message, '');
   } finally {
     if (syncing) { syncing.style.display = 'none'; }
   }
@@ -2639,6 +2643,11 @@ async function appInit() {
       if (S.requisicoes.length>0) {
         document.getElementById('sb-req-badge').style.display='';
         document.getElementById('sb-req-badge').textContent = S.requisicoes.length;
+      }
+      // Se catálogo já estiver visível, atualizar a tabela com dados frescos do servidor
+      if (document.getElementById('view-produtos')?.style.display === 'flex') {
+        buildProdMarcaList();
+        renderCatalogo();
       }
       setSyncDot('ok');
     } else {
