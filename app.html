@@ -2405,21 +2405,21 @@ const SECRET_KEY = 'supplyiq2026';
 function gasCall(action, extra={}) {
   const payload = { action, key: SECRET_KEY, ...extra };
   const payloadStr = JSON.stringify(payload);
-
-  // Ações de escrita com payload potencialmente grande: usa POST
-  const writeActions = ['saveFornecedores','saveRequisicoes','saveNfe','saveCatalogo','saveCatalogoChunk','saveUsuarios'];
-  
-  if (writeActions.includes(action) && payloadStr.length > 1500) {
-    // GAS perde o body no redirect CORS — envia o payload também na querystring como fallback
-    const qs = new URLSearchParams({ key: SECRET_KEY, action, payload: payloadStr }).toString();
-    return fetch(GAS_URL + '?' + qs, { redirect: 'follow' })
+  // CORREÇÃO: O GAS perde o body do POST no redirecionamento CORS.
+  // Solução: action+key sempre na querystring; payload pequeno vai como GET,
+  // payload grande vai como POST mas com action+key na QS como fallback.
+  const qsBase = GAS_URL + '?key=' + encodeURIComponent(SECRET_KEY) + '&action=' + encodeURIComponent(action);
+  if (payloadStr.length <= 1800) {
+    const qs = qsBase + '&payload=' + encodeURIComponent(payloadStr);
+    return fetch(qs, { redirect: 'follow' })
       .then(r => r.text()).then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,100)); } });
   }
-
-  // Todas as demais (leituras + writes pequenos): GET com payload na querystring
-  const qs = new URLSearchParams({ key: SECRET_KEY, action, payload: payloadStr }).toString();
-  return fetch(GAS_URL + '?' + qs, { redirect: 'follow' })
-    .then(r => r.text()).then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,100)); } });
+  return fetch(qsBase, {
+    method: 'POST',
+    headers: {'Content-Type':'text/plain;charset=utf-8'},
+    body: payloadStr,
+    redirect: 'follow'
+  }).then(r => r.text()).then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,100)); } });
 }
 
 function setSyncDot(state) {
