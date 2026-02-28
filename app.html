@@ -2404,18 +2404,22 @@ const SECRET_KEY = 'supplyiq2026';
 
 function gasCall(action, extra={}) {
   const payload = { action, key: SECRET_KEY, ...extra };
-  const readActions = ['login','getUsuarios','getFornecedores','getRequisicoes','getNfe','getAllData'];
-  if (readActions.includes(action)) {
-    const qs = new URLSearchParams({ key: SECRET_KEY, action, payload: JSON.stringify(payload) }).toString();
+  const payloadStr = JSON.stringify(payload);
+
+  // Ações de escrita com payload potencialmente grande: usa POST
+  const writeActions = ['saveFornecedores','saveRequisicoes','saveNfe','saveCatalogo','saveCatalogoChunk','saveUsuarios'];
+  
+  if (writeActions.includes(action) && payloadStr.length > 1500) {
+    // GAS perde o body no redirect CORS — envia o payload também na querystring como fallback
+    const qs = new URLSearchParams({ key: SECRET_KEY, action, payload: payloadStr }).toString();
     return fetch(GAS_URL + '?' + qs, { redirect: 'follow' })
       .then(r => r.text()).then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,100)); } });
   }
-  return fetch(GAS_URL, {
-    method: 'POST',
-    headers: {'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify(payload),
-    redirect: 'follow'
-  }).then(r => r.text()).then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,100)); } });
+
+  // Todas as demais (leituras + writes pequenos): GET com payload na querystring
+  const qs = new URLSearchParams({ key: SECRET_KEY, action, payload: payloadStr }).toString();
+  return fetch(GAS_URL + '?' + qs, { redirect: 'follow' })
+    .then(r => r.text()).then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,100)); } });
 }
 
 function setSyncDot(state) {
