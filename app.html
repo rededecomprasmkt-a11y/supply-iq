@@ -2274,28 +2274,35 @@ function catSort(col) {
 }
 
 async function renderCatalogoFull() {
-  // Sempre busca a versão mais recente do servidor antes de renderizar
+  // Renderiza imediatamente com dados locais
+  buildProdMarcaList();
+  renderCatalogo();
+
+  // Depois busca do servidor em background
   const syncing = document.getElementById('catSyncStatus');
   if (syncing) { syncing.style.display = 'flex'; }
   try {
-    // Usa getAllData para compatibilidade com versões anteriores do GAS
     const result = await gasCall('getAllData');
-    if (result.ok && Array.isArray(result.catalogo)) {
-      // Expandir campos minificados (compatibilidade com formato antigo e novo)
-      S.catalogo = result.catalogo.map(p => p.e ? {
+    if (result.ok) {
+      // Só substitui o catálogo pelo servidor se ele tiver MAIS itens que o local
+      // (evita sobrescrever importações locais ainda não sincronizadas)
+      const serverCat = (result.catalogo || []).map(p => p.e ? {
         ean: p.e, desc: p.d, marca: p.m, ncm: p.n||'',
         qtdTotal: p.q||0, disponivel: p.v||0, cmcTotal: p.c||0, updatedAt: p.u||''
       } : p);
-      if (Array.isArray(result.fornecedores)) S.fornecedores = result.fornecedores;
-      if (Array.isArray(result.requisicoes))  S.requisicoes  = result.requisicoes;
-      if (Array.isArray(result.nfe))          S.nfeHistory   = result.nfe;
+      if (serverCat.length >= S.catalogo.length) {
+        S.catalogo = serverCat;
+      }
+      if (Array.isArray(result.fornecedores) && result.fornecedores.length >= S.fornecedores.length)
+        S.fornecedores = result.fornecedores;
+      if (Array.isArray(result.requisicoes)  && result.requisicoes.length  >= S.requisicoes.length)
+        S.requisicoes  = result.requisicoes;
+      if (Array.isArray(result.nfe)          && result.nfe.length          >= S.nfeHistory.length)
+        S.nfeHistory   = result.nfe;
       saveLocal();
-    } else if (!result.ok) {
-      throw new Error(result.error || 'Erro ao buscar catálogo');
     }
   } catch(e) {
     console.warn('Catálogo: usando cache local —', e.message);
-    toast('⚠ Catálogo: usando dados locais — ' + e.message, '');
   } finally {
     if (syncing) { syncing.style.display = 'none'; }
   }
@@ -2403,9 +2410,8 @@ const GAS_URL    = 'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR
 const SECRET_KEY = 'supplyiq2026';
 
 function gasCall(action, extra={}) {
-  // action e key SEMPRE na querystring (GAS perde o body do POST no redirect CORS).
-  // Payload pequeno (<1500 chars) vai como GET.
-  // Payload grande vai como POST, mas action+key já estão na URL.
+  // action+key SEMPRE na QS. GAS perde body do POST no redirect CORS.
+  // Payloads < 1500 chars: GET puro. Maiores: POST com action+key na URL.
   const payload = { action, key: SECRET_KEY, ...extra };
   const payloadStr = JSON.stringify(payload);
   const urlBase = GAS_URL + '?key=' + encodeURIComponent(SECRET_KEY) + '&action=' + encodeURIComponent(action);
@@ -2413,7 +2419,6 @@ function gasCall(action, extra={}) {
     return fetch(urlBase + '&payload=' + encodeURIComponent(payloadStr), { redirect: 'follow' })
       .then(r => r.text()).then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,200)); } });
   }
-  // POST: body tem o payload completo; QS tem action+key como fallback
   return fetch(urlBase, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -2467,7 +2472,7 @@ function save(key) {
           // 1ª tentativa: GAS v3.0 com chunks
           let saved = false;
           try {
-            const CHUNK = 30; // 30 itens ~1-2KB por chunk, seguro para GAS
+            const CHUNK = 30;
             for (let i = 0; i < mini.length; i += CHUNK) {
               const r = await gasCall('saveCatalogoChunk', {
                 data: mini.slice(i, i + CHUNK),
