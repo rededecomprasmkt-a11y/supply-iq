@@ -2476,26 +2476,28 @@ function save(key) {
               if (i + CHUNK >= mini.length) saved = true;
             }
           } catch(e1) { saved = false; }
-          // 2ª tentativa: GAS v2 com saveCatalogo (máx ~350 itens por limite de célula)
+          // 2ª tentativa: GAS v2 com saveCatalogo
           if (!saved) {
             try {
-              const MAX = 350; // ~46KB, cabe em 1 célula do GAS
+              const MAX = 350;
               const r = await gasCall('saveCatalogo', { data: mini.slice(0, MAX) });
               if (r.ok) {
                 saved = true;
                 if (total > MAX) {
-                  toast('⚠️ GAS desatualizado: ' + MAX + '/' + total + ' itens salvos. Para salvar tudo: no GAS, publique uma "Nova versão" após colar o gas_backend.js.', '');
+                  toast('⚠️ GAS antigo: ' + MAX + '/' + total + ' itens salvos. Publique "Nova versão" no GAS.', '');
                 } else {
                   toast('✅ Catálogo salvo (' + total + ' itens)', 'success');
                 }
+              } else {
+                // Mostrar erro real do saveCatalogo para diagnóstico
+                console.warn('[Catálogo] saveCatalogo falhou:', r.error);
+                toast('⚠️ saveCatalogo: ' + (r.error||'erro desconhecido') + ' — catálogo salvo apenas localmente.', '');
+                saved = false;
               }
-            } catch(e2) { saved = false; }
-          }
-          if (!saved) {
-            // Catálogo fica apenas no localStorage
-            if (!window._gasWarnShown) {
-              window._gasWarnShown = true;
-              toast('⚠️ Catálogo salvo localmente. Para sincronizar entre usuários: atualize o GAS e publique "Nova versão".', '');
+            } catch(e2) {
+              console.warn('[Catálogo] saveCatalogo exception:', e2.message);
+              toast('⚠️ Catálogo local apenas. Erro: ' + e2.message, '');
+              saved = false;
             }
           }
         } else {
@@ -2706,6 +2708,34 @@ async function appInit() {
 }
 
 appInit();
+
+// ── Diagnóstico do GAS ──────────────────────────────────────────
+async function diagnosticarGAS() {
+  const btn = document.getElementById('btnDiagGAS');
+  if (btn) btn.textContent = '⏳ Testando...';
+  const resultados = [];
+  
+  const acoes = ['getAllData', 'getCatalogo', 'saveCatalogoChunk', 'saveCatalogo'];
+  for (const acao of acoes) {
+    try {
+      let r;
+      if (acao === 'saveCatalogoChunk') {
+        r = await gasCall('saveCatalogoChunk', {data:[{e:'TEST',d:'TEST',m:'T',n:'',q:0,v:0,c:0}], offset:0, total:1, replace:true});
+      } else if (acao === 'saveCatalogo') {
+        r = await gasCall('saveCatalogo', {data:[{e:'TEST',d:'TEST',m:'T',n:'',q:0,v:0,c:0}]});
+      } else {
+        r = await gasCall(acao);
+      }
+      resultados.push((r.ok ? '✅' : '❌') + ' ' + acao + (r.ok ? '' : ': ' + (r.error||'?')));
+    } catch(e) {
+      resultados.push('💥 ' + acao + ': ' + e.message);
+    }
+  }
+  
+  const msg = 'DIAGNÓSTICO GAS:\n' + resultados.join('\n');
+  alert(msg);
+  if (btn) btn.textContent = '🔍 Diagnosticar GAS';
+}
 </script>
 
 <!-- ── VIEWS FORA DO LAYOUT (posição fixa, tela cheia) ── -->
@@ -2824,6 +2854,9 @@ appInit();
         </div>
         <button class="btn" style="background:#00bcd4;color:#000;font-weight:800;width:100%;justify-content:center;font-size:12px" onclick="sincronizarCatalogo()">
           🔄 Sincronizar com Estoque
+        </button>
+        <button class="btn" id="btnDiagGAS" style="background:#333;color:#8fa8cc;width:100%;justify-content:center;font-size:11px;margin-top:6px" onclick="diagnosticarGAS()">
+          🔍 Diagnosticar GAS
         </button>
       </div>
 
