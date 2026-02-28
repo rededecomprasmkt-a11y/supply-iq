@@ -2460,19 +2460,44 @@ function save(key) {
             e: p.ean, d: p.desc, m: p.marca, n: p.ncm||'',
             q: p.qtdTotal||0, v: p.disponivel||0, c: p.cmcTotal||0
           }));
-          // Enviar em chunks de 100 itens (~13KB cada, seguro para POST)
-          const CHUNK = 100;
-          let ok = true;
-          for (let i = 0; i < mini.length; i += CHUNK) {
-            const r = await gasCall('saveCatalogoChunk', {
-              data: mini.slice(i, i + CHUNK),
-              offset: i,
-              total: total,
-              replace: i === 0
-            });
-            if (!r.ok) { ok = false; throw new Error(r.error || 'Falha no chunk ' + i); }
+          // 1ª tentativa: GAS v3.0 com chunks
+          let saved = false;
+          try {
+            const CHUNK = 100;
+            for (let i = 0; i < mini.length; i += CHUNK) {
+              const r = await gasCall('saveCatalogoChunk', {
+                data: mini.slice(i, i + CHUNK),
+                offset: i, total: total, replace: i === 0
+              });
+              if (!r.ok) {
+                if ((r.error||'').includes('desconhecida')) break; // GAS antigo
+                throw new Error(r.error);
+              }
+              if (i + CHUNK >= mini.length) saved = true;
+            }
+          } catch(e1) { saved = false; }
+          // 2ª tentativa: GAS v2 com saveCatalogo (máx ~350 itens por limite de célula)
+          if (!saved) {
+            try {
+              const MAX = 350; // ~46KB, cabe em 1 célula do GAS
+              const r = await gasCall('saveCatalogo', { data: mini.slice(0, MAX) });
+              if (r.ok) {
+                saved = true;
+                if (total > MAX) {
+                  toast('⚠️ GAS desatualizado: ' + MAX + '/' + total + ' itens salvos. Para salvar tudo: no GAS, publique uma "Nova versão" após colar o gas_backend.js.', '');
+                } else {
+                  toast('✅ Catálogo salvo (' + total + ' itens)', 'success');
+                }
+              }
+            } catch(e2) { saved = false; }
           }
-          if (ok) toast('✅ Catálogo salvo e sincronizado (' + total + ' itens)', 'success');
+          if (!saved) {
+            // Catálogo fica apenas no localStorage
+            if (!window._gasWarnShown) {
+              window._gasWarnShown = true;
+              toast('⚠️ Catálogo salvo localmente. Para sincronizar entre usuários: atualize o GAS e publique "Nova versão".', '');
+            }
+          }
         } else {
           const r = await gasCall(action, {data});
           if (!r.ok) throw new Error('Erro ao salvar ' + k + ': ' + (r.error||'?'));
