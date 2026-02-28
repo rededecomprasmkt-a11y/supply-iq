@@ -2403,23 +2403,16 @@ const GAS_URL    = 'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR
 const SECRET_KEY = 'supplyiq2026';
 
 function gasCall(action, extra={}) {
+  // CORREÇÃO DEFINITIVA: GAS faz redirect 302 em POSTs via browser (CORS),
+  // descartando o body. Por isso TUDO vai via GET com payload na querystring.
+  // O limite de URL do GAS é ~8KB — os chunks de 100 itens minificados ficam ~2KB, ok.
   const payload = { action, key: SECRET_KEY, ...extra };
-  const payloadStr = JSON.stringify(payload);
-  // CORREÇÃO: O GAS perde o body do POST no redirecionamento CORS.
-  // Solução: action+key sempre na querystring; payload pequeno vai como GET,
-  // payload grande vai como POST mas com action+key na QS como fallback.
-  const qsBase = GAS_URL + '?key=' + encodeURIComponent(SECRET_KEY) + '&action=' + encodeURIComponent(action);
-  if (payloadStr.length <= 1800) {
-    const qs = qsBase + '&payload=' + encodeURIComponent(payloadStr);
-    return fetch(qs, { redirect: 'follow' })
-      .then(r => r.text()).then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,100)); } });
-  }
-  return fetch(qsBase, {
-    method: 'POST',
-    headers: {'Content-Type':'text/plain;charset=utf-8'},
-    body: payloadStr,
-    redirect: 'follow'
-  }).then(r => r.text()).then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,100)); } });
+  const qs = '?key=' + encodeURIComponent(SECRET_KEY)
+           + '&action=' + encodeURIComponent(action)
+           + '&payload=' + encodeURIComponent(JSON.stringify(payload));
+  return fetch(GAS_URL + qs, { redirect: 'follow' })
+    .then(r => r.text())
+    .then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,200)); } });
 }
 
 function setSyncDot(state) {
