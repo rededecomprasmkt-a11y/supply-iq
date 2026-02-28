@@ -2403,16 +2403,23 @@ const GAS_URL    = 'https://script.google.com/macros/s/AKfycbyZy5dT3enhITGaQbESR
 const SECRET_KEY = 'supplyiq2026';
 
 function gasCall(action, extra={}) {
-  // CORREÇÃO DEFINITIVA: GAS faz redirect 302 em POSTs via browser (CORS),
-  // descartando o body. Por isso TUDO vai via GET com payload na querystring.
-  // O limite de URL do GAS é ~8KB — os chunks de 100 itens minificados ficam ~2KB, ok.
+  // action e key SEMPRE na querystring (GAS perde o body do POST no redirect CORS).
+  // Payload pequeno (<1500 chars) vai como GET.
+  // Payload grande vai como POST, mas action+key já estão na URL.
   const payload = { action, key: SECRET_KEY, ...extra };
-  const qs = '?key=' + encodeURIComponent(SECRET_KEY)
-           + '&action=' + encodeURIComponent(action)
-           + '&payload=' + encodeURIComponent(JSON.stringify(payload));
-  return fetch(GAS_URL + qs, { redirect: 'follow' })
-    .then(r => r.text())
-    .then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,200)); } });
+  const payloadStr = JSON.stringify(payload);
+  const urlBase = GAS_URL + '?key=' + encodeURIComponent(SECRET_KEY) + '&action=' + encodeURIComponent(action);
+  if (payloadStr.length <= 1500) {
+    return fetch(urlBase + '&payload=' + encodeURIComponent(payloadStr), { redirect: 'follow' })
+      .then(r => r.text()).then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,200)); } });
+  }
+  // POST: body tem o payload completo; QS tem action+key como fallback
+  return fetch(urlBase, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: payloadStr,
+    redirect: 'follow'
+  }).then(r => r.text()).then(t => { try { return JSON.parse(t); } catch(e) { throw new Error('Resposta inválida: ' + t.slice(0,200)); } });
 }
 
 function setSyncDot(state) {
@@ -2460,7 +2467,7 @@ function save(key) {
           // 1ª tentativa: GAS v3.0 com chunks
           let saved = false;
           try {
-            const CHUNK = 100;
+            const CHUNK = 30; // 30 itens ~1-2KB por chunk, seguro para GAS
             for (let i = 0; i < mini.length; i += CHUNK) {
               const r = await gasCall('saveCatalogoChunk', {
                 data: mini.slice(i, i + CHUNK),
