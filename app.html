@@ -2455,51 +2455,24 @@ function save(key) {
         // Sempre usa chunks para catálogo (limite seguro: 50 itens ~8KB por chunk)
         if (k === 'catalogo') {
           const total = data.length;
-          // Minificar: campos abreviados reduz ~60% do tamanho
+          // Campos minificados: reduz ~60% do payload
           const mini = data.map(p => ({
             e: p.ean, d: p.desc, m: p.marca, n: p.ncm||'',
             q: p.qtdTotal||0, v: p.disponivel||0, c: p.cmcTotal||0
           }));
-          // Tentar com GAS novo (saveCatalogoChunk) primeiro
+          // Enviar em chunks de 100 itens (~13KB cada, seguro para POST)
           const CHUNK = 100;
-          let usedChunk = false;
-          try {
-            for (let i = 0; i < mini.length; i += CHUNK) {
-              const chunk = mini.slice(i, i + CHUNK);
-              const r = await gasCall('saveCatalogoChunk', {data: chunk, offset: i, total, replace: i === 0});
-              if (!r.ok) {
-                if ((r.error||'').includes('desconhecida')) {
-                  // GAS antigo detectado — usar fallback
-                  break;
-                }
-                throw new Error(r.error||'Chunk falhou');
-              }
-              usedChunk = true;
-            }
-          } catch(chunkErr) { usedChunk = false; }
-          if (!usedChunk) {
-            // GAS antigo: tentar saveCatalogo simples
-            const safe = mini.slice(0, 400);
-            try {
-              const r2 = await gasCall('saveCatalogo', {data: safe});
-              if (!r2.ok && (r2.error||'').includes('desconhecida')) {
-                // GAS muito antigo — não tem suporte a catálogo
-                // Salvar só localmente e avisar UMA VEZ
-                if (!window._gasOldWarned) {
-                  window._gasOldWarned = true;
-                  toast('⚠ Script GAS desatualizado — catálogo salvo apenas localmente. Atualize o GAS para sincronizar entre usuários.', '');
-                }
-              } else if (!r2.ok) {
-                toast('⚠ Catálogo salvo localmente (' + (r2.error||'erro GAS') + ')', '');
-              } else {
-                toast('✅ Catálogo salvo' + (total > 400 ? ' (parcial — atualize o GAS)' : ' (' + safe.length + ' itens)'), total > 400 ? '' : 'success');
-              }
-            } catch(e2) {
-              // Silencioso — catálogo fica no localStorage
-            }
-          } else {
-            toast('✅ Catálogo salvo (' + total + ' itens)', 'success');
+          let ok = true;
+          for (let i = 0; i < mini.length; i += CHUNK) {
+            const r = await gasCall('saveCatalogoChunk', {
+              data: mini.slice(i, i + CHUNK),
+              offset: i,
+              total: total,
+              replace: i === 0
+            });
+            if (!r.ok) { ok = false; throw new Error(r.error || 'Falha no chunk ' + i); }
           }
+          if (ok) toast('✅ Catálogo salvo e sincronizado (' + total + ' itens)', 'success');
         } else {
           const r = await gasCall(action, {data});
           if (!r.ok) throw new Error('Erro ao salvar ' + k + ': ' + (r.error||'?'));
@@ -2509,13 +2482,7 @@ function save(key) {
     } catch(e) {
       console.error('Sync error:', e);
       setSyncDot('error');
-      // Não mostrar erro vermelho para problemas conhecidos de compatibilidade
-      const msg = e.message || '';
-      if (msg.includes('desconhecida') || msg.includes('Chunk')) {
-        toast('⚠ Script GAS desatualizado — atualize o GAS para sincronizar o catálogo entre usuários.', '');
-      } else {
-        toast('❌ Erro ao salvar: ' + msg, 'error');
-      }
+      toast('❌ Erro ao salvar: ' + (e.message||'verifique o console'), 'error');
     }
   }, 1200);
 }
